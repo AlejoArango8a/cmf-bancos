@@ -25,7 +25,7 @@
   --text3:   #5a7a96;
   --white:   #f8fafc;
   --mono:    'DM Mono', monospace;
-  --sans:    'Plus Jakarta Sans', sans-serif;
+  --sans:    'Inter', sans-serif;
 }
 body.light {
   --bg:      #f0f4f8;
@@ -46,11 +46,52 @@ body.light {
   --white:   #0f172a;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { height:100%; }
-body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; overflow:hidden; }
+html, body { height:100%; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; }
+
+/* ============================================================
+   RESPONSIVE BREAKPOINTS
+   ============================================================ */
+@media (max-width: 1200px) {
+  #usdRateLabel { display:none !important; }
+}
+@media (max-width: 900px) {
+  .sidebar { width: 200px; }
+  .kpi-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+@media (max-width: 700px) {
+  body { overflow: auto; }
+  .app { grid-template-rows: auto 1fr; height: auto; min-height: 100vh; }
+  .body { flex-direction: column; overflow: visible; }
+  .sidebar {
+    width: 100% !important;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .sidebar-block { flex: 1; min-width: 140px; }
+  .bank-scroll { max-height: 160px; }
+  .main { overflow-y: visible; padding: 10px; }
+  .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 6px; }
+  .topbar-right { flex-wrap: wrap; gap: 4px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .g2 { grid-template-columns: 1fr; }
+  #tab-explorador > div { grid-template-columns: 1fr !important; }
+  #expTree { max-height: 200px; overflow-y: auto; }
+  .rcbtn { font-size: 11px; padding: 5px 10px; }
+  .chart-canvas { max-height: 220px !important; }
+}
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi-val { font-size: 16px; }
+  .topbar-title { font-size: 11px; }
+  .tab { font-size: 11px; padding: 4px 8px; }
+}
 
 /* LAYOUT */
-.app { display:grid; grid-template-rows:56px 1fr; height:100vh; }
+.app { display:grid; grid-template-rows:56px 1fr; height:100dvh; min-height:0; }
 
 /* TOPBAR */
 .topbar {
@@ -60,6 +101,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
   padding:0 16px;
   position:relative;
   z-index:50;
+  overflow:hidden;
+  min-width:0;
 }
 .brand {
   font-family:var(--mono);
@@ -89,12 +132,24 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
 }
 .tab:hover { color:var(--text); }
 .tab.active { color:var(--white); border-bottom-color:var(--accent); }
+.tab.primary {
+  font-size:13px; font-weight:700;
+  color:var(--text);
+  letter-spacing:0.2px;
+}
+.tab.primary.active { color:var(--white); border-bottom-color:var(--accent); border-bottom-width:3px; }
+.tab.primary:hover { color:var(--white); }
 .topbar-right {
   font-family:var(--mono);
   font-size:10px;
   color:var(--text3);
   white-space:nowrap;
-  margin-left:16px;
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-shrink:0;
+  overflow:hidden;
 }
 .status-pill {
   display:inline-flex; align-items:center; gap:5px;
@@ -114,7 +169,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
 /* BODY */
-.body { display:flex; overflow:hidden; }
+.body { display:flex; overflow:hidden; flex:1; min-height:0; }
 
 /* SIDEBAR */
 .sidebar {
@@ -123,6 +178,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
   border-right:1px solid var(--border);
   display:flex; flex-direction:column;
   overflow:hidden; flex-shrink:0;
+  min-height:0;
 }
 .sidebar-block { padding:12px; border-bottom:1px solid var(--border); }
 .sidebar-label {
@@ -160,10 +216,10 @@ select option { background:var(--bg3); }
 .bank-code { font-family:var(--mono); font-size:9px; color:var(--text3); }
 .btn-primary {
   margin:10px; padding:9px;
-  background:var(--accent); color:#000;
+  background:#2563eb; color:#ffffff;
   border:none; border-radius:4px;
   font-family:var(--mono); font-size:11px;
-  font-weight:500; letter-spacing:1px;
+  font-weight:700; letter-spacing:1px;
   cursor:pointer; text-transform:uppercase;
   transition:opacity 0.15s;
 }
@@ -179,7 +235,7 @@ select option { background:var(--bg3); }
 .btn-sm:hover { color:var(--text); border-color:var(--border2); }
 
 /* MAIN */
-.main { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; }
+.main { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:20px; min-height:0; min-width:0; }
 .main::-webkit-scrollbar { width:5px; }
 .main::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
 
@@ -211,6 +267,9 @@ select option { background:var(--bg3); }
 .kpi-label { font-size:10px; color:var(--text2); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px; }
 .kpi-val { font-family:var(--sans); font-size:19px; font-weight:600; color:var(--white); line-height:1; }
 .kpi-sub { font-size:11px; color:var(--text3); margin-top:4px; font-family:var(--sans); }
+.kpi-btn { cursor:pointer; transition:transform 0.1s, box-shadow 0.1s; }
+.kpi-btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+.kpi-btn.kpi-active { box-shadow:0 0 0 2px var(--accent); }
 
 /* PANEL */
 .panel { background:var(--bg2); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
@@ -249,7 +308,7 @@ select option { background:var(--bg3); }
   text-transform:uppercase; border-bottom:1px solid var(--border);
   font-weight:400;
 }
-.tbl td { padding:6px 8px; color:var(--text); border-bottom:1px solid rgba(28,42,58,0.6); }
+.tbl td { padding:6px 8px; color:var(--text); border-bottom:1px solid rgba(28,42,58,0.6); white-space:nowrap; }
 .tbl tr:last-child td { border-bottom:none; }
 .tbl tr:hover td { background:rgba(255,255,255,0.015); }
 .tbl .r { text-align:right; }
@@ -355,8 +414,8 @@ select option { background:var(--bg3); }
   <div class="topbar">
     <div class="brand" style="line-height:1.2;letter-spacing:2px;">ALM BTG<br>BANKS MONITOR</div>
     <div class="tabs">
-      <button class="tab active" onclick="showTab('resumen')">Bank Monitor</button>
-      <button class="tab" onclick="showTab('chileanbanks')">Chilean Banks</button>
+      <button class="tab primary active" onclick="showTab('resumen')">Bank Monitor</button>
+      <button class="tab primary" onclick="showTab('chileanbanks')">Chilean Banks</button>
       <button class="tab" onclick="showTab('balance')">Balance Sheet</button>
       <button class="tab" onclick="showTab('resultados')">Income Statement</button>
       <button class="tab" onclick="showTab('explorador')">Account Explorer</button>
@@ -415,15 +474,24 @@ select option { background:var(--bg3); }
       <div class="err-box" id="errBox"></div>
 
       <!-- TABS -->
-      <div id="dashContent" style="display:none;flex-direction:column;gap:14px;">
+      <div id="dashContent" style="display:none;flex-direction:column;gap:20px;">
 
         <!-- RESUMEN -->
         <div id="tab-resumen">
-          <div class="kpi-grid" id="kpiResumen"></div>
+          <!-- Bank header -->
+          <div id="bankHeader" style="display:none;margin-bottom:10px;padding:14px 18px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;border-left:4px solid var(--accent);">
+            <div style="font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Analyzing</div>
+            <div id="bankHeaderName" style="font-size:22px;font-weight:700;color:var(--white);line-height:1.1;"></div>
+            <div id="bankHeaderSub" style="font-size:12px;color:var(--text2);margin-top:3px;"></div>
+          </div>
 
-          <!-- Bank identity bar -->
-          <div id="bankIdentityBar" style="display:none;justify-content:flex-end;align-items:center;padding:8px 4px 6px;">
-            <span id="bankNameFallback" style="font-family:var(--sans);font-size:16px;font-weight:600;color:var(--text2);letter-spacing:0.5px;"></span>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-left:2px;">Key data</div>
+          <div class="kpi-grid" id="kpiResumen"></div>
+          <div style="margin-bottom:14px;"></div>
+
+          <!-- Remove old identity bar -->
+          <div id="bankIdentityBar" style="display:none;">
+            <span id="bankNameFallback"></span>
           </div>
           <div class="panel">
             <div class="panel-head">
@@ -454,11 +522,11 @@ select option { background:var(--bg3); }
             </div>
           </div>
           <!-- Chart data table -->
-          <div class="panel" id="resChartTablePanel" style="display:none;margin-top:0;">
+          <div class="panel" id="resChartTablePanel" style="display:none;margin-top:8px;">
             <div class="panel-head">
               <div class="panel-title" id="resChartTableTitle">Chart Data</div>
             </div>
-            <div class="panel-body" style="overflow-x:auto;" id="resChartTable"></div>
+            <div class="panel-body" style="overflow-x:auto;padding:0;" id="resChartTable"></div>
           </div>
         </div>
 
@@ -543,7 +611,7 @@ select option { background:var(--bg3); }
 
         <!-- EXPLORADOR -->
         <div id="tab-explorador" style="display:none;">
-          <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;min-height:500px;">
+          <div style="display:grid;grid-template-columns:minmax(200px,280px) 1fr;gap:14px;min-height:500px;min-width:0;">
 
             <!-- Left: account list -->
             <div class="panel" style="overflow:hidden;">
@@ -552,7 +620,7 @@ select option { background:var(--bg3); }
             </div>
 
             <!-- Right: chart + sub-accounts -->
-            <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;flex-direction:column;gap:20px;">
               <div id="expResult" style="display:none;">
                 <div class="panel">
                   <div class="panel-head">
@@ -604,11 +672,11 @@ select option { background:var(--bg3); }
               <div class="panel-body">
                 <div class="sidebar-label" style="margin-bottom:12px;">Dashboard font</div>
                 <div style="display:flex;flex-direction:column;gap:6px;" id="fontOptList">
-                  <div class="font-opt" id="fontOpt1" onclick="setFont('\'Plus Jakarta Sans\', sans-serif','fontOpt1')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-radius:6px;border:2px solid var(--accent);cursor:pointer;background:rgba(56,189,248,0.05);">
+                  <div class="font-opt" id="fontOpt1" onclick="setFont('\'Plus Jakarta Sans\', sans-serif','fontOpt1')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-radius:6px;border:1px solid var(--border);cursor:pointer;">
                     <span style="font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:500;color:var(--white);">Plus Jakarta Sans</span>
                     <span style="font-size:11px;color:var(--text2);">Moderna · recomendada</span>
                   </div>
-                  <div class="font-opt" id="fontOpt2" onclick="setFont('\'Inter\', sans-serif','fontOpt2')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-radius:6px;border:1px solid var(--border);cursor:pointer;">
+                  <div class="font-opt" id="fontOpt2" onclick="setFont('\'Inter\', sans-serif','fontOpt2')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-radius:6px;border:2px solid var(--accent);cursor:pointer;background:rgba(56,189,248,0.05);">
                     <span style="font-family:'Inter',sans-serif;font-size:15px;font-weight:500;color:var(--text);">Inter</span>
                     <span style="font-size:11px;color:var(--text2);">Financial dashboards</span>
                   </div>
@@ -790,20 +858,20 @@ async function init() {
 // BANK NAME OVERRIDES
 // ============================================================
 const BANK_NAMES = {
-  1:   'Bank de Chile',
-  9:   'Bank Internacional',
-  12:  'Bank Estado',
+  1:   'Banco de Chile',
+  9:   'Banco Internacional',
+  12:  'Banco Estado',
   14:  'Scotiabank',
   16:  'BCI',
-  28:  'Bank BICE',
+  28:  'Banco BICE',
   31:  'HSBC Bank',
   37:  'Santander',
   39:  'Itaú',
   41:  'JP Morgan',
-  49:  'Bank Security',
-  51:  'Bank Falabella',
-  53:  'Bank Ripley',
-  55:  'Bank Consorcio',
+  49:  'Banco Security',
+  51:  'Banco Falabella',
+  53:  'Banco Ripley',
+  55:  'Banco Consorcio',
   59:  'BTG Pactual',
   60:  'China Construction Bank',
   61:  'Bank of China',
@@ -856,7 +924,7 @@ function toggleTheme() {
   if (ST._lastResChart) showResChart(ST._lastResChart);
 }
 ST.chartType = 'bars';
-ST.showBarLabels = true;
+ST.showBarLabels = null; // null=auto, true=force on, false=force off
 
 function setChartType(type) {
   ST.chartType = type;
@@ -870,13 +938,16 @@ function setChartType(type) {
 }
 
 function toggleBarLabels() {
-  ST.showBarLabels = !ST.showBarLabels;
+  // Two states only: true(on ✓) ↔ false(off ✗)
+  ST.showBarLabels = ST.showBarLabels !== true;
+
   ['btnLabels','btnExpLabels'].forEach(id => {
     const btn = document.getElementById(id);
-    if (btn) {
-      btn.style.background = ST.showBarLabels ? 'rgba(56,189,248,0.12)' : 'var(--bg3)';
-      btn.style.borderColor = ST.showBarLabels ? 'var(--accent)' : 'var(--border)';
-      btn.style.color = ST.showBarLabels ? 'var(--accent)' : 'var(--text2)';
+    if (!btn) return;
+    if (ST.showBarLabels === true) {
+      btn.style.background = 'rgba(56,189,248,0.12)'; btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; btn.textContent = '123 ✓';
+    } else {
+      btn.style.background = 'var(--bg3)'; btn.style.borderColor = 'var(--red)'; btn.style.color = 'var(--red)'; btn.textContent = '123 ✗';
     }
   });
   if (ST._lastResChart) showResChart(ST._lastResChart);
@@ -981,7 +1052,7 @@ function fillPeriodSelectors() {
   });
   // Default: last 12 months
   const n = ST.periodos.length;
-  desde.selectedIndex = Math.max(0, n - 12);
+  desde.selectedIndex = Math.max(0, n - 18);
   hasta.selectedIndex = n - 1;
   ST.desde = ST.periodos[desde.selectedIndex];
   ST.hasta = ST.periodos[hasta.selectedIndex];
@@ -1125,34 +1196,44 @@ function refreshKPIs() {
   const lastMonth = parseInt(m.lastP.slice(4,6));
   const utilAnualizada = m.utilidad * (12 / lastMonth);
   const roe = m.patrimonio ? (utilAnualizada / m.patrimonio * 100).toFixed(2) + '%' : '—';
-  const roeSubLabel = `Month ${lastMonth} × ${(12/lastMonth).toFixed(2)}`;
+  const roeSubLabel = `Month ${lastMonth} × ${Math.round(12/lastMonth)}`;
 
   // Label showing which bank the KPIs correspond to
   const firstBank = ST.selectedOrder[0];
   const bankLabel = firstBank ? `<span style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-left:6px;">${bankName(firstBank)}</span>` : '';
 
-  // Update bank identity bar
-  const bar = document.getElementById('bankIdentityBar');
-  const nameFallback = document.getElementById('bankNameFallback');
-  if (bar && nameFallback && firstBank) {
+  // Update prominent bank header
+  const header = document.getElementById('bankHeader');
+  const headerName = document.getElementById('bankHeaderName');
+  const headerSub = document.getElementById('bankHeaderSub');
+  if (header && firstBank) {
     const BANK_COLORS = { 59: '#2563eb' };
     const CHART_COLORS = ['#38bdf8','#f59e0b','#f87171','#a78bfa'];
-    bar.style.display = 'flex';
-    nameFallback.textContent = bankName(firstBank);
-    nameFallback.style.color = BANK_COLORS[firstBank] || CHART_COLORS[0];
-  } else if (bar) {
-    bar.style.display = 'none';
+    const color = BANK_COLORS[firstBank] || CHART_COLORS[0];
+    header.style.display = 'block';
+    header.style.borderLeftColor = color;
+    headerName.textContent = bankName(firstBank);
+    headerName.style.color = color;
+    // Sub: show other selected banks if any
+    const others = ST.selectedOrder.slice(1).map(c => bankName(c));
+    headerSub.textContent = others.length
+      ? `Compared with: ${others.join(', ')} · ${periodLabel(m.lastP)}`
+      : `Last period: ${periodLabel(m.lastP)}`;
+  } else if (header) {
+    header.style.display = 'none';
   }
 
   document.getElementById('kpiResumen').innerHTML = `
-    <div class="kpi blue"><div class="kpi-label">Total Assets ${bankLabel}</div><div class="kpi-val">${fmtKPI(m.totalAssets)}</div><div class="kpi-sub">${fmtP(m.colocaciones,m.totalAssets)} of loans</div></div>
-    <div class="kpi green"><div class="kpi-label">Loans</div><div class="kpi-val">${fmtKPI(m.colocaciones)}</div><div class="kpi-sub">${fmtP(m.colocaciones,m.totalAssets)} of assets</div></div>
-    <div class="kpi yellow"><div class="kpi-label">Deposits</div><div class="kpi-val">${fmtKPI(m.depositos)}</div><div class="kpi-sub">Demand + Time</div></div>
-    <div class="kpi red"><div class="kpi-label">Total Liabilities</div><div class="kpi-val">${fmtKPI(m.pasivos)}</div><div class="kpi-sub">${fmtP(m.pasivos,m.totalAssets)} of assets</div></div>
-    <div class="kpi purple"><div class="kpi-label">Equity</div><div class="kpi-val">${fmtKPI(m.patrimonio)}</div><div class="kpi-sub">${fmtP(m.patrimonio,m.totalAssets)} of assets</div></div>
-    <div class="kpi blue"><div class="kpi-label">Net Income</div><div class="kpi-val ${m.utilidad<0?'neg':''}">${fmtKPI(m.utilidad)}</div><div class="kpi-sub">ROA ${fmtP(m.utilidad,m.totalAssets)}</div></div>
-    <div class="kpi green"><div class="kpi-label">Annual ROE</div><div class="kpi-val ${utilAnualizada<0?'neg':''}">${roe}</div><div class="kpi-sub">${roeSubLabel}</div></div>
-    <div class="kpi red"><div class="kpi-label">NPL +90d</div><div class="kpi-val">${fmtKPI(m.mora90)}</div><div class="kpi-sub">${fmtP(m.mora90,m.colocaciones)} of loans</div></div>
+    <div class="kpi blue kpi-btn" onclick="showResChart('activos')"><div class="kpi-label">Total Assets ${bankLabel}</div><div class="kpi-val">${fmtKPI(m.totalAssets)}</div><div class="kpi-sub">${fmtP(m.colocaciones,m.totalAssets)} of loans</div></div>
+    <div class="kpi green kpi-btn" onclick="showResChart('coloc')"><div class="kpi-label">Loans</div><div class="kpi-val">${fmtKPI(m.colocaciones)}</div><div class="kpi-sub">${fmtP(m.colocaciones,m.totalAssets)} of assets</div></div>
+    <div class="kpi yellow kpi-btn" onclick="showResChart('dep_vista')"><div class="kpi-label">Demand Deposits</div><div class="kpi-val">${fmtKPI(m.depVista)}</div><div class="kpi-sub">${fmtP(m.depVista,m.depositos)} of deposits</div></div>
+    <div class="kpi yellow kpi-btn" onclick="showResChart('dep_plazo')"><div class="kpi-label">Time Deposits</div><div class="kpi-val">${fmtKPI(m.depPlazo)}</div><div class="kpi-sub">${fmtP(m.depPlazo,m.depositos)} of deposits</div></div>
+    <div class="kpi blue kpi-btn" onclick="showResChart('bonos')"><div class="kpi-label">Bonds Issued</div><div class="kpi-val">${fmtKPI(m.bonos)}</div><div class="kpi-sub">${fmtP(m.bonos,m.totalAssets)} of assets</div></div>
+    <div class="kpi red kpi-btn" onclick="showResChart('pasivos')"><div class="kpi-label">Total Liabilities</div><div class="kpi-val">${fmtKPI(m.pasivos)}</div><div class="kpi-sub">${fmtP(m.pasivos,m.totalAssets)} of assets</div></div>
+    <div class="kpi purple kpi-btn" onclick="showResChart('patrimonio')"><div class="kpi-label">Equity</div><div class="kpi-val">${fmtKPI(m.patrimonio)}</div><div class="kpi-sub">${fmtP(m.patrimonio,m.totalAssets)} of assets</div></div>
+    <div class="kpi blue kpi-btn" onclick="showResChart('utilidad')"><div class="kpi-label">Net Income</div><div class="kpi-val ${m.utilidad<0?'neg':''}">${fmtKPI(m.utilidad)}</div><div class="kpi-sub">ROA ${fmtP(m.utilidad,m.totalAssets)}</div></div>
+    <div class="kpi green kpi-btn" onclick="showResChart('mora')"><div class="kpi-label">Annual ROE</div><div class="kpi-val ${utilAnualizada<0?'neg':''}">${roe}</div><div class="kpi-sub">${roeSubLabel}</div></div>
+    <div class="kpi red kpi-btn" onclick="showResChart('mora')"><div class="kpi-label">NPL +90d</div><div class="kpi-val">${fmtKPI(m.mora90)}</div><div class="kpi-sub">${fmtP(m.mora90,m.colocaciones)} of loans</div></div>
   `;
 
   document.getElementById('kpiBalance').innerHTML = `
@@ -1250,10 +1331,13 @@ async function run() {
     // For total activos, use 510000000 (Total Liabilities y Equity) as fallback
     const totalAssets  = b1v('100000000');
     const colocaciones  = b1v('500000000');
-    const depositos     = b1v('241000000') + b1v('242000000');
-    const patrimonio    = b1v('300000000');
-    const utilidad      = r1v('590000000');
-    const mora90        = c1v('857000000');
+    const depVista     = b1v('241000000');
+    const depPlazo     = b1v('242000000');
+    const depositos    = depVista + depPlazo;
+    const bonos        = b1v('245000000');
+    const patrimonio   = b1v('300000000');
+    const utilidad     = r1v('590000000');
+    const mora90       = c1v('857000000');
 
     // ---- RESULTADOS variables (needed for _kpiRaw) ----
     const ingresoNeto = r1v('520000000');
@@ -1271,7 +1355,8 @@ async function run() {
     const lastMonth = parseInt(lastP.slice(4,6));
 
     // Store raw values for currency refresh
-    ST._kpiRaw = { totalAssets, colocaciones, depositos, patrimonio, utilidad, mora90,
+    ST._kpiRaw = { totalAssets, colocaciones, depositos, depVista, depPlazo, bonos,
+      patrimonio, utilidad, mora90,
       pasivos: b1v('200000000'), ingresoNeto, totalIng, lastP,
       perdCred, impuesto, resOp, totalGas, resOpA, ingComis, ingresoReaj, resFin };
 
@@ -1344,6 +1429,11 @@ function showResChart(tipo) {
   document.querySelectorAll('.rcbtn').forEach(b => {
     b.classList.toggle('active', b.textContent.trim() === map[tipo]);
   });
+  // Highlight matching KPI card
+  const kpiMap = { activos:0, coloc:1, dep_vista:2, dep_plazo:3, bonos:4, pasivos:5, patrimonio:6, utilidad:7, mora:9 };
+  document.querySelectorAll('#kpiResumen .kpi-btn').forEach((el, i) => {
+    el.classList.toggle('kpi-active', i === kpiMap[tipo]);
+  });
   if (!ST._series) return;
   const { periodos, b1, r1, c1 } = ST._series;
 
@@ -1394,9 +1484,9 @@ function showResChart(tipo) {
     panel.style.display = 'block';
 
     // Header: Bank | Period1 | Period2 ...
-    let html = `<table class="tbl"><thead><tr>
-      <th>Bank</th>
-      ${periodos.map(p => `<th class="r" style="font-size:10px;white-space:nowrap;">${periodLabel(p)}</th>`).join('')}
+    let html = `<table class="tbl" style="white-space:nowrap;font-size:12px;"><thead><tr>
+      <th style="white-space:nowrap;min-width:120px;">Bank</th>
+      ${periodos.map(p => `<th class="r" style="white-space:nowrap;min-width:80px;font-size:10px;">${periodLabel(p)}</th>`).join('')}
     </tr></thead><tbody>`;
 
     series.forEach(s => {
@@ -1404,9 +1494,10 @@ function showResChart(tipo) {
         <td style="font-weight:600;color:${s.color};white-space:nowrap;">${s.label}</td>
         ${s.data.map(v => {
           if (v === null || v === undefined) return `<td class="r" style="color:var(--text3)">—</td>`;
-          // v is already in the display unit (billions or millions after usdFactor)
           const neg = v < 0;
-          return `<td class="r ${neg ? 'neg' : ''}">${fmtAxis(v)}</td>`;
+          // Format compactly: e.g. "5.6 B" without "USD " prefix to save space
+          const txt = fmtAxis(v);
+          return `<td class="r ${neg ? 'neg' : ''}" style="white-space:nowrap;">${txt}</td>`;
         }).join('')}
       </tr>`;
     });
@@ -1432,19 +1523,24 @@ function fmtAxis(v) {
 }
 
 function niceScale(lo, hi) {
-  // If all values positive and min > 20% of max, start from near the min (not zero)
-  const forceZero = lo < 0 || (hi > 0 && lo < hi * 0.2);
+  const allNeg = hi <= 0 && lo < 0;
+  const allPos = lo >= 0 && hi > 0;
+
+  // For all-negative: don't force zero — show the actual negative range
+  // For all-positive where min > 20% of max: start from near the min
+  // Otherwise include zero
+  const forceZero = !allNeg && (lo < 0 || (allPos && lo < hi * 0.2));
   const scaleLo = forceZero ? Math.min(0, lo) : lo;
 
   const range = hi - scaleLo || 1;
   const roughStep = range / 4;
-  const mag = Math.pow(10, Math.floor(Math.log10(roughStep)));
+  const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(roughStep) || 1)));
   const steps = [1, 2, 2.5, 5, 10];
   let step = mag;
   for (const s of steps) {
     if (s * mag >= roughStep) { step = s * mag; break; }
   }
-  const nLo = forceZero ? Math.floor(scaleLo / step) * step : Math.floor(lo / step) * step;
+  const nLo = Math.floor(scaleLo / step) * step;
   const nHi = Math.ceil(hi / step) * step;
   const ticks = [];
   for (let t = nLo; t <= nHi + step * 0.01; t += step) ticks.push(parseFloat(t.toPrecision(10)));
@@ -1491,8 +1587,19 @@ function drawLineChart(canvasId, periodos, series, chartType) {
   const allVals = series.flatMap(s => s.data).filter(v => v !== null && isFinite(v));
   if (!allVals.length) return;
 
-  const rawLo = Math.min(...allVals);
-  const rawHi = Math.max(...allVals);
+  let rawLo = Math.min(...allVals);
+  let rawHi = Math.max(...allVals);
+
+  // Ensure minimum visible range so small variations are visible
+  const absMax = Math.max(Math.abs(rawLo), Math.abs(rawHi)) || 1;
+  const dataRange = rawHi - rawLo;
+  const minRange = absMax * 0.15;
+  if (dataRange < minRange) {
+    const pad = (minRange - dataRange) / 2;
+    rawLo -= pad;
+    rawHi += pad;
+  }
+
   const scale = niceScale(rawLo, rawHi);
   const lo = scale.lo, hi = scale.hi;
 
@@ -1558,8 +1665,9 @@ function drawLineChart(canvasId, periodos, series, chartType) {
       }
     });
   } else {
-    // Bar chart mode — draw bars first, then labels on top
-    const showLabels = ST.showBarLabels;
+    const nSeries = series.filter(s=>s.data.some(v=>v!==null)).length;
+    // null=auto (on for 1 bank, off for 2+), true=always on, false=always off
+    const showLabels = ST.showBarLabels === null ? nSeries === 1 : ST.showBarLabels === true;
     const labelsToDraw = [];
 
     series.forEach((s, si) => {
@@ -1567,8 +1675,11 @@ function drawLineChart(canvasId, periodos, series, chartType) {
       s.data.forEach((v, i) => {
         if (v === null) return;
         const x = PAD.l + i * groupW + barPad + si * barW;
-        const barTop = Math.max(PAD.t, toY(Math.max(0, v)));
-        const barBottom = Math.min(PAD.t + cH, zeroY);
+        // For bars: draw from the reference point (zero if in range, else scale edge)
+        const refY = Math.min(Math.max(zeroY, PAD.t), PAD.t + cH); // clamp zero to chart area
+        const valY = Math.min(Math.max(toY(v), PAD.t), PAD.t + cH);
+        const barTop = Math.min(refY, valY);
+        const barBottom = Math.max(refY, valY);
         const h = Math.max(1, barBottom - barTop);
         ctx.fillStyle = color;
         ctx.globalAlpha = 0.85;
@@ -1662,40 +1773,40 @@ function setupChartTooltip(canvasId, tooltipId) {
 const BAL_SECTIONS = {
   activos: [
     {c:'100000000',l:'TOTAL ASSETS',cls:'hl'},
-    {c:'105000000',l:'Efectivo y Depósitos en Banks',cls:'i1'},
-    {c:'107000000',l:'Operaciones Liquidación en Curso',cls:'i1'},
-    {c:'110000000',l:'Assets Fin. para Negociar (VR)',cls:'i1'},
-    {c:'120000000',l:'Assets Fin. a VR otro Resultado Integral',cls:'i1'},
-    {c:'130000000',l:'Derivados para Cobertura Contable',cls:'i1'},
-    {c:'140000000',l:'Assets Financieros a Costo Amortizado',cls:'i1'},
-    {c:'144000000',l:'Créditos y Accounts por Cobrar Clientes',cls:'i2'},
+    {c:'105000000',l:'Efectivo y Depósitos en Bancos',cls:'i1'},
+    {c:'107000000',l:'Operaciones en Liquidación',cls:'i1'},
+    {c:'110000000',l:'Activos Financieros para Negociar (VR)',cls:'i1'},
+    {c:'120000000',l:'Activos Financieros a VR con cambios en ORI',cls:'i1'},
+    {c:'130000000',l:'Derivados de Cobertura Contable',cls:'i1'},
+    {c:'140000000',l:'Activos Financieros a Costo Amortizado',cls:'i1'},
+    {c:'144000000',l:'Créditos y Cuentas por Cobrar a Clientes',cls:'i2'},
     {c:'145000000',l:'Colocaciones Comerciales',cls:'i3'},
     {c:'146000000',l:'Colocaciones para Vivienda',cls:'i3'},
     {c:'148000000',l:'Colocaciones de Consumo',cls:'i3'},
-    {c:'149000000',l:'Provisiones por Riesgo Crédito',cls:'i3'},
+    {c:'149000000',l:'Provisiones por Riesgo de Crédito',cls:'i3'},
     {c:'500000000',l:'TOTAL LOANS',cls:'hl'},
     {c:'150000000',l:'Inversiones en Sociedades',cls:'i1'},
-    {c:'160000000',l:'Assets Intangibles',cls:'i1'},
-    {c:'170000000',l:'Assets Fijos',cls:'i1'},
+    {c:'160000000',l:'Activos Intangibles',cls:'i1'},
+    {c:'170000000',l:'Activos Fijos',cls:'i1'},
     {c:'185000000',l:'Impuestos Diferidos',cls:'i1'},
-    {c:'190000000',l:'Otros Assets',cls:'i1'},
+    {c:'190000000',l:'Otros Activos',cls:'i1'},
   ],
   pasivos: [
     {c:'200000000',l:'TOTAL LIABILITIES',cls:'hl'},
-    {c:'207000000',l:'Operaciones Liquidación en Curso',cls:'i1'},
-    {c:'210000000',l:'Liabilities Fin. para Negociar (VR)',cls:'i1'},
-    {c:'230000000',l:'Derivados para Cobertura Contable',cls:'i1'},
-    {c:'240000000',l:'Liabilities Financieros a Costo Amortizado',cls:'i1'},
+    {c:'207000000',l:'Operaciones en Liquidación',cls:'i1'},
+    {c:'210000000',l:'Pasivos Financieros para Negociar (VR)',cls:'i1'},
+    {c:'230000000',l:'Derivados de Cobertura Contable',cls:'i1'},
+    {c:'240000000',l:'Pasivos Financieros a Costo Amortizado',cls:'i1'},
     {c:'241000000',l:'Depósitos a la Vista',cls:'i2'},
     {c:'242000000',l:'Depósitos y Captaciones a Plazo',cls:'i2'},
     {c:'243000000',l:'Obligaciones por Retrocompra',cls:'i2'},
-    {c:'244000000',l:'Obligaciones con Banks',cls:'i2'},
+    {c:'244000000',l:'Obligaciones con Bancos',cls:'i2'},
     {c:'245000000',l:'Instrumentos de Deuda Emitidos',cls:'i2'},
     {c:'250000000',l:'Obligaciones por Arrendamiento',cls:'i1'},
     {c:'255000000',l:'Capital Regulatorio Emitido',cls:'i1'},
     {c:'260000000',l:'Provisiones por Contingencias',cls:'i1'},
-    {c:'270000000',l:'Provisiones Especiales Riesgo Crédito',cls:'i1'},
-    {c:'290000000',l:'Otros Liabilities',cls:'i1'},
+    {c:'270000000',l:'Provisiones Especiales Riesgo de Crédito',cls:'i1'},
+    {c:'290000000',l:'Otros Pasivos',cls:'i1'},
   ],
   patrimonio: [
     {c:'300000000',l:'TOTAL EQUITY',cls:'hl'},
@@ -1703,9 +1814,9 @@ const BAL_SECTIONS = {
     {c:'311000000',l:'Capital Pagado',cls:'i2'},
     {c:'320000000',l:'Reservas',cls:'i1'},
     {c:'330000000',l:'Otro Resultado Integral Acumulado',cls:'i1'},
-    {c:'340000000',l:'Utilidades Acumuladas Anteriores',cls:'i1'},
+    {c:'340000000',l:'Utilidades Acumuladas de Períodos Anteriores',cls:'i1'},
     {c:'350000000',l:'Utilidad (Pérdida) del Ejercicio',cls:'i1'},
-    {c:'380000000',l:'Equity de los Propietarios',cls:'hl'},
+    {c:'380000000',l:'Patrimonio de los Propietarios',cls:'hl'},
   ]
 };
 // English key aliases
@@ -1837,7 +1948,7 @@ function renderResTable(m) {
     {l:'Credit Loss Expense',    c:'470000000', cls:'i1'},
     {l:'OPERATING RESULT',             c:'580000000', cls:'hl'},
     {l:'Income Tax',               c:'480000000', cls:'i1'},
-    {l:'NET INCOME (PÉRDIDA) DEL EJERCICIO',  c:'590000000', cls:'hl'},
+    {l:'NET INCOME (LOSS)',  c:'590000000', cls:'hl'},
   ];
 
   // Always show one column per bank
@@ -2004,21 +2115,14 @@ const CUENTAS_PRINCIPALES = {
   '200000000': 'Liabilities',
   '300000000': 'Equity accounts',
   '400000000': 'Income statement',
-  '500000000': 'IS - Summary',
+  '500000000': 'Income statement summary',
   '600000000': 'Off-balance',
   '800000000': 'Supplementary information',
 };
 
 function getExpAccounts() {
-  // Fixed main accounts + any additional from plan_cuentas ending in 8 zeros
-  const all = { ...CUENTAS_PRINCIPALES };
-  Object.keys(ST.planCuentas).filter(c => /^[1-9]0{8}$/.test(c))
-    .forEach(c => { if (!all[c]) all[c] = ST.planCuentas[c]; });
-  // Use plan_cuentas description if available (more accurate)
-  Object.keys(CUENTAS_PRINCIPALES).forEach(c => {
-    if (ST.planCuentas[c]) all[c] = ST.planCuentas[c];
-  });
-  return Object.keys(all).sort();
+  // Always show exactly these 7 root accounts, in order
+  return Object.keys(CUENTAS_PRINCIPALES).sort();
 }
 
 function toSentenceCase(str) {
@@ -2057,7 +2161,7 @@ function renderExpGrid() {
       padding:10px 16px;cursor:pointer;border-left:3px solid ${active ? color : 'transparent'};
       background:${active ? 'rgba(56,189,248,0.06)' : 'transparent'};
       border-bottom:1px solid var(--border);transition:all 0.15s;">
-      <span style="font-family:var(--mono);font-size:10px;color:${color};min-width:78px;flex-shrink:0;">${c}</span>
+      <span style="font-family:var(--mono);font-size:14px;color:${color};flex-shrink:0;width:16px;text-align:center;">${c[0]}</span>
       <span style="font-size:13px;color:${active ? 'var(--white)' : 'var(--text)'};font-weight:${active ? '600' : '400'};line-height:1.3;">${label}</span>
     </div>`;
   });
@@ -2161,37 +2265,28 @@ async function expSelect(code) {
     const subList = document.getElementById('expSubList');
     if (subAccounts.length > 0) {
       subPanel.style.display = 'block';
-      document.getElementById('expSubTitle').textContent = `Sub-accounts de ${label}`;
+      document.getElementById('expSubTitle').textContent = `Sub-accounts of ${label}`;
 
-      // Fetch last period values for all sub-accounts at once
-      const subRows = subAccounts.length > 0 ? await supa('datos_financieros', {
+      // Fetch last period values for all sub-accounts
+      const subRows = await supa('datos_financieros', {
         select: 'cuenta,ins_cod,monto_total',
         eq: { tipo, periodo: lastP },
         in: { cuenta: subAccounts, ins_cod: banks }
-      }) : [];
-
-      // Sum across selected banks for each sub-account
-      const subVals = {};
-      subAccounts.forEach(c => {
-        subVals[c] = subRows
-          .filter(r => r.cuenta === c && banks.includes(r.ins_cod))
-          .reduce((s, r) => s + (r.monto_total || 0), 0);
       });
 
-      let subHtml = `<table class="tbl"><thead><tr><th>Código</th><th>Descripción</th><th class="r">Last period</th></tr></thead><tbody>`;
-      subAccounts.forEach(c => {
-        const subLabel = toSentenceCase(ST.planCuentas[c] || c);
-        const val = subVals[c] || 0;
-        subHtml += `<tr style="cursor:pointer;" onclick="expSelect('${c}')"
-          onmouseover="this.style.background='rgba(56,189,248,0.04)'"
-          onmouseout="this.style.background='transparent'">
-          <td class="cod" style="color:var(--accent)">${c}</td>
-          <td style="color:var(--text)">${subLabel}</td>
-          <td class="r ${val < 0 ? 'neg' : ''}">${fmtKPIDecimal(val)}</td>
-        </tr>`;
+      // Build sub-account data
+      const subData = subAccounts.map(c => {
+        const val = subRows.filter(r => r.cuenta === c && banks.includes(r.ins_cod))
+                           .reduce((s, r) => s + (r.monto_total || 0), 0);
+        const hasData = subRows.some(r => r.cuenta === c);
+        return { c, label: toSentenceCase(ST.planCuentas[c] || c), val, hasData };
       });
-      subHtml += '</tbody></table>';
-      subList.innerHTML = subHtml;
+
+      // Store for re-render
+      ST._expSubData = { subData, code };
+      ST._expSubSort = ST._expSubSort || { col: 'code', dir: 1 };
+      ST._expSubFilter = ST._expSubFilter !== undefined ? ST._expSubFilter : false;
+      renderExpSubTable();
     } else {
       subPanel.style.display = 'none';
     }
@@ -2203,8 +2298,82 @@ async function expSelect(code) {
   }
 }
 
+function sortExpSubBy(col) {
+  if (!ST._expSubSort) ST._expSubSort = { col, dir: 1 };
+  if (ST._expSubSort.col === col) {
+    ST._expSubSort.dir *= -1;
+  } else {
+    ST._expSubSort.col = col;
+    ST._expSubSort.dir = col === 'val' ? -1 : 1;
+  }
+  renderExpSubTable();
+}
+
+function toggleExpSubFilter() {
+  ST._expSubFilter = !ST._expSubFilter;
+  const btn = document.getElementById('expSubFilterBtn');
+  if (btn) {
+    btn.style.background = ST._expSubFilter ? 'var(--accent)' : 'var(--bg3)';
+    btn.style.color = ST._expSubFilter ? '#fff' : 'var(--text2)';
+    btn.style.borderColor = ST._expSubFilter ? 'var(--accent)' : 'var(--border)';
+    btn.textContent = 'Only accounts with data';
+  }
+  renderExpSubTable();
+}
+
+function renderExpSubTable() {
+  const subList = document.getElementById('expSubList');
+  if (!subList || !ST._expSubData) return;
+
+  const { col, dir } = ST._expSubSort || { col: 'code', dir: 1 };
+  let data = [...ST._expSubData.subData];
+
+  // Filter: only accounts with non-zero value
+  if (ST._expSubFilter) data = data.filter(d => d.val !== 0);
+
+  // Sort
+  data.sort((a, b) => {
+    if (col === 'code') return dir * a.c.localeCompare(b.c);
+    if (col === 'label') return dir * a.label.localeCompare(b.label);
+    if (col === 'val') return dir * (b.val - a.val);
+    return 0;
+  });
+
+  const arrow = (c) => col === c ? (dir === 1 ? ' ↑' : ' ↓') : '';
+  const thS = 'cursor:pointer;user-select:none;';
+
+  let html = `
+    <div style="display:flex;justify-content:flex-start;padding:8px 14px 0;">
+      <button id="expSubFilterBtn" onclick="toggleExpSubFilter()" style="
+        padding:4px 12px;border-radius:4px;font-size:11px;cursor:pointer;
+        font-family:var(--sans);border:1px solid ${ST._expSubFilter ? 'var(--accent)' : 'var(--border)'};
+        background:${ST._expSubFilter ? 'var(--accent)' : 'var(--bg3)'};
+        color:${ST._expSubFilter ? '#fff' : 'var(--text2)'};">
+        ${ST._expSubFilter ? '✓ Only accounts with data' : 'Only accounts with data'}
+      </button>
+    </div>
+    <table class="tbl"><thead><tr>
+      <th style="${thS}" onclick="sortExpSubBy('code')">Code${arrow('code')}</th>
+      <th style="${thS}" onclick="sortExpSubBy('label')">Description${arrow('label')}</th>
+      <th class="r" style="${thS}" onclick="sortExpSubBy('val')">Last period${arrow('val')}</th>
+    </tr></thead><tbody>`;
+
+  data.forEach(({ c, label, val, hasData }) => {
+    const dim = !hasData ? 'opacity:0.45;' : '';
+    html += `<tr style="${dim}cursor:pointer;" onclick="expSelect('${c}')"
+      onmouseover="this.style.background='rgba(56,189,248,0.04)'"
+      onmouseout="this.style.background='transparent'">
+      <td class="cod" style="color:var(--accent)">${c}</td>
+      <td style="color:var(--text)">${label}</td>
+      <td class="r ${val < 0 ? 'neg' : ''}">${hasData ? fmtKPIDecimal(val) : '—'}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  subList.innerHTML = html;
+}
+
 function expGoBack() {
-  if (ST.exp.history.length === 0) return;
   const prev = ST.exp.history.pop();
   const currentSelected = ST.exp.selected;
   ST.exp.selected = prev; // set directly to avoid adding to history
@@ -2302,6 +2471,21 @@ function showTab(tab) {
   if (tab==='chileanbanks') renderChileanBanks();
 }
 
+function loadBankFromTable(bankCode) {
+  // Clear selection, select only this bank, run, navigate to Bank Monitor
+  ST.selected.clear();
+  ST.selectedOrder = [];
+  toggleBank(bankCode, true);
+  fillBankList();
+  showTab('resumen');
+  document.querySelector('.tab').click(); // ensure tab is active
+  // Switch active tab styling
+  document.querySelectorAll('.tab').forEach(b =>
+    b.classList.toggle('active', b.textContent.trim() === 'Bank Monitor')
+  );
+  run();
+}
+
 async function renderChileanBanks() {
   const el = document.getElementById('cbTable');
   if (!el) return;
@@ -2327,69 +2511,108 @@ async function renderChileanBanks() {
       rows.filter(r => r.ins_cod === bank && r.cuenta === cuenta)
           .reduce((s, r) => s + (r.monto_total || 0), 0);
 
-    const bankData = allBanks.map(c => ({
-      code: c,
-      name: bankName(c),
+    ST._cbData = allBanks.map(c => ({
+      code: c, name: bankName(c),
       assets:      getVal(c, '100000000'),
       loans:       getVal(c, '144000000'),
       commLoans:   getVal(c, '145000000'),
       liabilities: getVal(c, '200000000'),
       equity:      getVal(c, '300000000'),
-    })).filter(b => b.assets > 0)
-       .sort((a, b) => b.equity - a.equity);
+    })).filter(b => b.assets > 0);
 
-    const COLS = [
-      { label: 'Bank', key: 'name', align: 'left', fmt: v => v },
-      { label: 'Total Assets', key: 'assets', align: 'right', fmt: fmtKPIDecimal },
-      { label: 'Total Loans', key: 'loans', align: 'right', fmt: fmtKPIDecimal },
-      { label: 'Commercial Loans', key: 'commLoans', align: 'right', fmt: fmtKPIDecimal },
-      { label: 'Total Liabilities', key: 'liabilities', align: 'right', fmt: fmtKPIDecimal },
-      { label: 'Equity', key: 'equity', align: 'right', fmt: fmtKPIDecimal },
-      { label: 'Equity / Assets', key: null, align: 'right', fmt: null },
-    ];
-
-    let html = `<div style="overflow-x:auto"><table class="tbl">
-      <thead><tr>${COLS.map(c => `<th class="${c.align==='right'?'r':''}">${c.label}</th>`).join('')}</tr></thead>
-      <tbody>`;
-
-    bankData.forEach((b, i) => {
-      const eqRatio = b.assets ? (b.equity / b.assets * 100).toFixed(1) + '%' : '—';
-      const rowBg = i % 2 === 0 ? '' : 'background:rgba(0,0,0,0.02)';
-      html += `<tr style="${rowBg}">
-        <td style="font-weight:500">${b.name}</td>
-        <td class="r">${fmtKPIDecimal(b.assets)}</td>
-        <td class="r">${fmtKPIDecimal(b.loans)}</td>
-        <td class="r">${fmtKPIDecimal(b.commLoans)}</td>
-        <td class="r">${fmtKPIDecimal(b.liabilities)}</td>
-        <td class="r" style="font-weight:600">${fmtKPIDecimal(b.equity)}</td>
-        <td class="r" style="color:var(--text2)">${eqRatio}</td>
-      </tr>`;
-    });
-
-    // Totals row
-    const tot = bankData.reduce((acc, b) => {
-      acc.assets += b.assets; acc.loans += b.loans;
-      acc.commLoans += b.commLoans; acc.liabilities += b.liabilities;
-      acc.equity += b.equity; return acc;
-    }, {assets:0,loans:0,commLoans:0,liabilities:0,equity:0});
-    const totEqRatio = tot.assets ? (tot.equity / tot.assets * 100).toFixed(1) + '%' : '—';
-
-    html += `<tr style="border-top:2px solid var(--border2);font-weight:700;color:var(--white)">
-      <td>SYSTEM TOTAL</td>
-      <td class="r">${fmtKPIDecimal(tot.assets)}</td>
-      <td class="r">${fmtKPIDecimal(tot.loans)}</td>
-      <td class="r">${fmtKPIDecimal(tot.commLoans)}</td>
-      <td class="r">${fmtKPIDecimal(tot.liabilities)}</td>
-      <td class="r">${fmtKPIDecimal(tot.equity)}</td>
-      <td class="r">${totEqRatio}</td>
-    </tr>`;
-
-    html += '</tbody></table></div>';
-    el.innerHTML = html;
+    if (!ST._cbSort) ST._cbSort = { col: 'equity', dir: -1 };
+    renderCBTable();
 
   } catch(e) {
     el.innerHTML = `<div class="empty"><p>Error loading data: ${e.message}</p></div>`;
   }
+}
+
+function sortCBBy(col) {
+  if (!ST._cbSort) ST._cbSort = { col, dir: -1 };
+  if (ST._cbSort.col === col) {
+    ST._cbSort.dir *= -1;
+  } else {
+    ST._cbSort.col = col;
+    ST._cbSort.dir = col === 'name' ? 1 : -1;
+  }
+  renderCBTable();
+}
+
+function renderCBTable() {
+  const el = document.getElementById('cbTable');
+  if (!el || !ST._cbData) return;
+
+  const { col, dir } = ST._cbSort;
+  const bankData = [...ST._cbData].sort((a, b) => {
+    const av = col === 'name' ? a.name : a[col];
+    const bv = col === 'name' ? b.name : b[col];
+    if (col === 'name') return dir * av.localeCompare(bv);
+    return dir * (bv - av);
+  });
+
+  const thStyle = `padding:10px 14px;font-size:11px;font-weight:700;letter-spacing:0.5px;
+    text-transform:uppercase;color:var(--white);border-bottom:2px solid var(--border2);
+    cursor:pointer;user-select:none;white-space:nowrap;`;
+  const thStyleL = thStyle + 'text-align:left;';
+  const arrow = (c) => col === c ? (dir === 1 ? ' ↑' : ' ↓') : ' ↕';
+
+  let html = `<div style="overflow-x:auto"><table class="tbl" style="table-layout:fixed;width:100%;">
+    <thead><tr style="background:var(--bg4);">
+      <th style="${thStyleL}width:22%;" onclick="sortCBBy('name')">Bank${arrow('name')}</th>
+      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('assets')">Total Assets${arrow('assets')}</th>
+      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('loans')">Total Loans${arrow('loans')}</th>
+      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('commLoans')">Comm. Loans${arrow('commLoans')}</th>
+      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('liabilities')">Total Liab.${arrow('liabilities')}</th>
+      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('equity')">Equity${arrow('equity')}</th>
+      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('eqRatio')">Eq./Assets${arrow('eqRatio')}</th>
+    </tr></thead>
+    <tbody>`;
+
+  bankData.forEach((b) => {
+    const isBTG = b.code === 59;
+    const eqRatio = b.assets ? (b.equity / b.assets * 100).toFixed(1) + '%' : '—';
+    const rowStyle = isBTG
+      ? 'background:rgba(37,99,235,0.08);border-left:3px solid #2563eb;'
+      : 'border-left:3px solid transparent;';
+    const nameStyle = isBTG ? 'font-weight:700;color:#2563eb;' : 'font-weight:500;color:var(--text);';
+    html += `<tr style="${rowStyle}transition:background 0.1s;cursor:pointer;"
+      onclick="loadBankFromTable(${b.code})"
+      onmouseover="this.style.background='${isBTG ? 'rgba(37,99,235,0.14)' : 'rgba(56,189,248,0.06)'}'"
+      onmouseout="this.style.background='${isBTG ? 'rgba(37,99,235,0.08)' : 'transparent'}'">
+      <td style="${nameStyle}overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        ${isBTG ? '★ ' : ''}${b.name}
+        <span style="font-size:10px;color:var(--accent);margin-left:6px;opacity:0.7;">→</span>
+      </td>
+      <td class="r">${fmtKPIDecimal(b.assets)}</td>
+      <td class="r">${fmtKPIDecimal(b.loans)}</td>
+      <td class="r">${fmtKPIDecimal(b.commLoans)}</td>
+      <td class="r">${fmtKPIDecimal(b.liabilities)}</td>
+      <td class="r" style="font-weight:600;${isBTG?'color:#2563eb;':''}">${fmtKPIDecimal(b.equity)}</td>
+      <td class="r" style="color:var(--text2)">${eqRatio}</td>
+    </tr>`;
+  });
+
+  // Totals row — same style as header
+  const tot = bankData.reduce((acc, b) => {
+    acc.assets += b.assets; acc.loans += b.loans;
+    acc.commLoans += b.commLoans; acc.liabilities += b.liabilities;
+    acc.equity += b.equity; return acc;
+  }, {assets:0,loans:0,commLoans:0,liabilities:0,equity:0});
+  const totEqRatio = tot.assets ? (tot.equity / tot.assets * 100).toFixed(1) + '%' : '—';
+
+  html += `<tr style="background:var(--bg4);border-top:2px solid var(--border2);border-left:3px solid transparent;">
+    <td style="font-weight:700;color:var(--white);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">System Total</td>
+    <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.assets)}</td>
+    <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.loans)}</td>
+    <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.commLoans)}</td>
+    <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.liabilities)}</td>
+    <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.equity)}</td>
+    <td class="r" style="font-weight:700;color:var(--text2);">${totEqRatio}</td>
+  </tr>`;
+
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
 }
 
 function populateConfig() {
