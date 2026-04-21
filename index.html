@@ -517,7 +517,8 @@ select option { background:var(--bg3); }
                   <button id="btnLabels" onclick="toggleBarLabels()" style="padding:3px 8px;background:rgba(56,189,248,0.12);border:1px solid var(--accent);border-radius:3px;font-size:10px;color:var(--accent);cursor:pointer;font-family:var(--mono);" title="Mostrar/ocultar valores">123</button>
                 </div>
               </div>
-              <div class="chart-wrap"><canvas class="chart-canvas" id="chartResumen" height="360"></canvas></div>
+              <div id="chartResumenWrap" class="chart-wrap"><canvas class="chart-canvas" id="chartResumen" height="360"></canvas></div>
+              <div id="roeSystemWrap" style="display:none;"></div>
               <div class="legend" id="resumenLegend" style="margin-top:10px;"></div>
             </div>
           </div>
@@ -640,10 +641,10 @@ select option { background:var(--bg3); }
                   </div>
                 </div>
 
-                <!-- Sub-accounts -->
+                <!-- Sub-accounts tree -->
                 <div class="panel" id="expSubPanel" style="display:none;">
                   <div class="panel-head">
-                    <div><div class="panel-title" id="expSubTitle">Sub-accounts</div><div class="panel-sub">Select to view detail</div></div>
+                    <div><div class="panel-title" id="expSubTitle">Sub-accounts</div><div class="panel-sub">Click to drill down · 3 levels</div></div>
                   </div>
                   <div id="expSubList"></div>
                 </div>
@@ -728,6 +729,15 @@ select option { background:var(--bg3); }
                   <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:2;" id="configBanks">—</div>
                 </div>
               </div>
+            </div>
+
+            <!-- Ratings editor -->
+            <div class="panel">
+              <div class="panel-head">
+                <div><div class="panel-title">Bank Ratings (Feller Rate)</div><div class="panel-sub">Edit ratings for banks not automatically found</div></div>
+                <button onclick="renderRatingsEditor()" style="padding:4px 10px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--sans);">↺ Refresh</button>
+              </div>
+              <div class="panel-body" id="ratingsEditor"></div>
             </div>
           </div>
         </div>
@@ -1002,6 +1012,10 @@ function toggleCurrency() {
   if (ST._series) showResChart(ST._lastResChart || 'assets');
   if (ST._b1) showBalTab(ST._lastBalTab || 'assets');
   if (ST._resTableData) renderResTable(ST._resTableData);
+  // Refresh explorer if account selected
+  if (ST.exp.selected) expSelect(ST.exp.selected);
+  // Refresh Chilean Banks if data loaded
+  if (ST._cbData) renderCBTable();
 }
 
 function convertAmt(clpMillions) {
@@ -1232,7 +1246,7 @@ function refreshKPIs() {
     <div class="kpi red kpi-btn" onclick="showResChart('pasivos')"><div class="kpi-label">Total Liabilities</div><div class="kpi-val">${fmtKPI(m.pasivos)}</div><div class="kpi-sub">${fmtP(m.pasivos,m.totalAssets)} of assets</div></div>
     <div class="kpi purple kpi-btn" onclick="showResChart('patrimonio')"><div class="kpi-label">Equity</div><div class="kpi-val">${fmtKPI(m.patrimonio)}</div><div class="kpi-sub">${fmtP(m.patrimonio,m.totalAssets)} of assets</div></div>
     <div class="kpi blue kpi-btn" onclick="showResChart('utilidad')"><div class="kpi-label">Net Income</div><div class="kpi-val ${m.utilidad<0?'neg':''}">${fmtKPI(m.utilidad)}</div><div class="kpi-sub">ROA ${fmtP(m.utilidad,m.totalAssets)}</div></div>
-    <div class="kpi green kpi-btn" onclick="showResChart('mora')"><div class="kpi-label">Annual ROE</div><div class="kpi-val ${utilAnualizada<0?'neg':''}">${roe}</div><div class="kpi-sub">${roeSubLabel}</div></div>
+    <div class="kpi green kpi-btn" onclick="showROEChart()"><div class="kpi-label">Annual ROE</div><div class="kpi-val ${utilAnualizada<0?'neg':''}">${roe}</div><div class="kpi-sub">${roeSubLabel}</div></div>
     <div class="kpi red kpi-btn" onclick="showResChart('mora')"><div class="kpi-label">NPL +90d</div><div class="kpi-val">${fmtKPI(m.mora90)}</div><div class="kpi-sub">${fmtP(m.mora90,m.colocaciones)} of loans</div></div>
   `;
 
@@ -1423,8 +1437,96 @@ function sparseData(rawData) {
   return rawData.map((v, i) => i < firstNonZero ? null : v);
 }
 
+async function showROEChart() {
+  // Swap: hide normal chart, show ROE in same space
+  const chartWrap = document.getElementById('chartResumenWrap');
+  const roeWrap = document.getElementById('roeSystemWrap');
+  if (!chartWrap || !roeWrap) return;
+
+  chartWrap.style.display = 'none';
+  roeWrap.style.display = 'block';
+  roeWrap.innerHTML = '<div style="padding:20px;color:var(--text2);">Loading ROE data...</div>';
+  // Hide data table while ROE is shown
+  const dataTable = document.getElementById('resChartTablePanel');
+  if (dataTable) dataTable.style.display = 'none';
+
+  // Highlight ROE KPI card
+  document.querySelectorAll('#kpiResumen .kpi-btn').forEach((el, i) => {
+    el.classList.toggle('kpi-active', i === 8); // Annual ROE is index 8
+  });
+  // Update panel title
+  const titleEl = document.querySelector('#tab-resumen .panel-title');
+  if (titleEl) titleEl.textContent = 'Annual ROE — All Banks';
+
+  try {
+    const lastP = ST.periodos[ST.periodos.length - 1];
+    const lastMonth = parseInt(lastP.slice(4, 6));
+    const allBanks = Object.keys(ST.bancos).map(Number).filter(c => c !== 999);
+
+    const [rows, equityRows] = await Promise.all([
+      supa('datos_financieros', {
+        select: 'ins_cod,monto_total',
+        eq: { tipo: 'r1', periodo: lastP, cuenta: '590000000' },
+        in: { ins_cod: allBanks }
+      }),
+      supa('datos_financieros', {
+        select: 'ins_cod,monto_total',
+        eq: { tipo: 'b1', periodo: lastP, cuenta: '300000000' },
+        in: { ins_cod: allBanks }
+      })
+    ]);
+
+    const getUtil = c => rows.filter(r => r.ins_cod === c).reduce((s,r) => s+(r.monto_total||0), 0);
+    const getEq   = c => equityRows.filter(r => r.ins_cod === c).reduce((s,r) => s+(r.monto_total||0), 0);
+
+    const bankROEs = allBanks.map(c => {
+      const util = getUtil(c), eq = getEq(c);
+      return { code: c, name: bankName(c), roe: eq ? (util/eq)*(12/lastMonth)*100 : null };
+    }).filter(b => b.roe !== null && Math.abs(b.roe) > 0.01)
+      .sort((a, b) => b.roe - a.roe);
+
+    const maxAbs = Math.max(...bankROEs.map(b => Math.abs(b.roe)));
+    let html = `<div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-family:var(--mono);">
+      Annualized (Month ${lastMonth} × ${Math.round(12/lastMonth)}) · ${periodLabel(lastP)}</div>`;
+    html += '<div style="display:flex;flex-direction:column;gap:5px;">';
+    bankROEs.forEach(b => {
+      const isBTG = b.code === 59;
+      const pct = Math.abs(b.roe) / maxAbs * 100;
+      const color = b.roe >= 0 ? (isBTG ? '#2563eb' : 'var(--accent)') : 'var(--red)';
+      html += `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;"
+        onclick="loadBankFromTable(${b.code})" title="Load ${b.name}">
+        <div style="width:150px;font-size:12px;font-weight:${isBTG?'700':'400'};
+          color:${isBTG?'#2563eb':'var(--text)'};text-align:right;flex-shrink:0;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.name}</div>
+        <div style="flex:1;background:var(--bg3);border-radius:3px;height:18px;">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;opacity:0.85;"></div>
+        </div>
+        <div style="width:55px;font-family:var(--mono);font-size:12px;font-weight:600;
+          color:${b.roe>=0?'var(--green)':'var(--red)'};text-align:right;flex-shrink:0;">
+          ${b.roe.toFixed(1)}%</div>
+      </div>`;
+    });
+    html += '</div>';
+    roeWrap.innerHTML = html;
+
+  } catch(e) {
+    roeWrap.innerHTML = `<div style="color:var(--red);">Error: ${e.message}</div>`;
+  }
+}
+
 function showResChart(tipo) {
   ST._lastResChart = tipo;
+
+  // Restore normal chart (hide ROE chart if showing)
+  const chartWrap = document.getElementById('chartResumenWrap');
+  const roeWrap = document.getElementById('roeSystemWrap');
+  if (chartWrap) chartWrap.style.display = 'block';
+  if (roeWrap) roeWrap.style.display = 'none';
+  // Restore data table
+  const dataTable = document.getElementById('resChartTablePanel');
+  if (dataTable && ST._lastResChart) dataTable.style.display = 'block';
+  const titleEl = document.querySelector('#tab-resumen .panel-title');
+  if (titleEl) titleEl.textContent = 'Banking System Evolution';
   const map = { activos:'📊 Assets', coloc:'💳 Loans', pasivos:'📉 Liabilities', patrimonio:'🏛 Equity', utilidad:'💰 Net Income', mora:'⚠️ NPL', dep_vista:'👁 Demand Dep.', dep_plazo:'⏱ Time Dep.', bonos:'📄 Bonds' };
   document.querySelectorAll('.rcbtn').forEach(b => {
     b.classList.toggle('active', b.textContent.trim() === map[tipo]);
@@ -1477,10 +1579,10 @@ function showResChart(tipo) {
   // Chart data table — banks as rows, periods as columns
   const panel = document.getElementById('resChartTablePanel');
   const tableEl = document.getElementById('resChartTable');
-  const titleEl = document.getElementById('resChartTableTitle');
+  const tableTitleEl = document.getElementById('resChartTableTitle');
   if (panel && tableEl) {
     const metricLabels = { activos:'Assets', coloc:'Loans', pasivos:'Liabilities', patrimonio:'Equity', utilidad:'Net Income', mora:'NPL +90d', dep_vista:'Demand Deposits', dep_plazo:'Time Deposits', bonos:'Bonds' };
-    titleEl.textContent = metricLabels[tipo] || tipo;
+    if (tableTitleEl) tableTitleEl.textContent = metricLabels[tipo] || tipo;
     panel.style.display = 'block';
 
     // Header: Bank | Period1 | Period2 ...
@@ -2190,14 +2292,10 @@ async function expSelect(code) {
   const tipoLabels = {b1:'Consolidated balance', r1:'Income statement', c1:'Supplementary information'};
   document.getElementById('expType').textContent = tipoLabels[tipo] || '';
 
-  // For top-level accounts (x00000000), show all sub-accounts starting with same digit
-  // For deeper accounts, use the significant prefix
-  const isTopLevel = /^[1-9]0{8}$/.test(code);
-  const sigPrefix = code.replace(/0+$/, '');
-  const searchPrefix = isTopLevel ? code[0] : sigPrefix;
-
+  // Always show ALL accounts in plan_cuentas that share the same first digit
+  // excluding the root accounts (x00000000) themselves
   const subAccounts = Object.keys(ST.planCuentas)
-    .filter(c => c !== code && c.startsWith(searchPrefix) && !/^[1-9]0{8}$/.test(c))
+    .filter(c => c !== code && c[0] === code[0] && !/^[1-9]0{8}$/.test(c))
     .sort();
 
   setStatus('loading', 'Loading account...');
@@ -2260,33 +2358,109 @@ async function expSelect(code) {
     tHtml += '</tbody></table>';
     document.getElementById('expTable').innerHTML = tHtml;
 
-    // Sub-accounts with values
-    const subPanel = document.getElementById('expSubPanel');
-    const subList = document.getElementById('expSubList');
-    if (subAccounts.length > 0) {
-      subPanel.style.display = 'block';
-      document.getElementById('expSubTitle').textContent = `Sub-accounts of ${label}`;
+    // Sub-accounts: 3-level hierarchical tree
+    // Level 1: ###000000 (first 3 digits significant)
+    // Level 2: ######0 or #######0 (more digits)
+    // Level 3: full account
+    const digit = code[0];
+    const allSubs = Object.keys(ST.planCuentas)
+      .filter(c => c !== code && c[0] === digit && !/^[1-9]0{8}$/.test(c))
+      .sort();
 
-      // Fetch last period values for all sub-accounts
+    const subPanel = document.getElementById('expSubPanel');
+    if (allSubs.length > 0) {
+      subPanel.style.display = 'block';
+      document.getElementById('expSubTitle').textContent = `Sub-accounts`;
+
+      // Fetch last period values for all sub-accounts (batch)
       const subRows = await supa('datos_financieros', {
         select: 'cuenta,ins_cod,monto_total',
         eq: { tipo, periodo: lastP },
-        in: { cuenta: subAccounts, ins_cod: banks }
+        in: { cuenta: allSubs, ins_cod: banks }
       });
 
-      // Build sub-account data
-      const subData = subAccounts.map(c => {
-        const val = subRows.filter(r => r.cuenta === c && banks.includes(r.ins_cod))
-                           .reduce((s, r) => s + (r.monto_total || 0), 0);
-        const hasData = subRows.some(r => r.cuenta === c);
-        return { c, label: toSentenceCase(ST.planCuentas[c] || c), val, hasData };
-      });
+      const getSubVal = c => subRows
+        .filter(r => r.cuenta === c && banks.includes(r.ins_cod))
+        .reduce((s, r) => s + (r.monto_total || 0), 0);
 
-      // Store for re-render
-      ST._expSubData = { subData, code };
-      ST._expSubSort = ST._expSubSort || { col: 'code', dir: 1 };
-      ST._expSubFilter = ST._expSubFilter !== undefined ? ST._expSubFilter : false;
-      renderExpSubTable();
+      // Build 3-level tree structure
+      // Level 1 = accounts ending in 6+ zeros (###000000, ####000000...)
+      // Level 2 = accounts ending in 2-5 zeros
+      // Level 3 = accounts ending in 0 or 1 zero (leaf)
+      const getLevel = c => {
+        const trailing = c.match(/0+$/)?.[0].length || 0;
+        if (trailing >= 6) return 1;
+        if (trailing >= 2) return 2;
+        return 3;
+      };
+
+      // Store expanded state
+      if (!ST._expTreeExpanded) ST._expTreeExpanded = {};
+
+      const renderTree = () => {
+        const subList = document.getElementById('expSubList');
+        if (!subList) return;
+
+        const l1Accounts = allSubs.filter(c => getLevel(c) === 1);
+
+        let html = `
+          <div style="display:flex;justify-content:flex-start;padding:8px 14px 0;">
+            <button id="expSubFilterBtn" onclick="toggleExpSubFilter()" style="
+              padding:4px 12px;border-radius:4px;font-size:11px;cursor:pointer;
+              font-family:var(--sans);border:1px solid ${ST._expSubFilter ? 'var(--accent)' : 'var(--border)'};
+              background:${ST._expSubFilter ? 'var(--accent)' : 'var(--bg3)'};
+              color:${ST._expSubFilter ? '#fff' : 'var(--text2)'};">
+              ${ST._expSubFilter ? '✓ Only accounts with data' : 'Only accounts with data'}
+            </button>
+          </div>
+          <table class="tbl"><thead><tr>
+            <th style="width:110px;">Code</th>
+            <th>Description</th>
+            <th class="r" style="width:120px;">Last period</th>
+          </tr></thead><tbody>`;
+
+        const renderRow = (c, indent) => {
+          const val = getSubVal(c);
+          const hasData = val !== 0;
+          if (ST._expSubFilter && !hasData) return '';
+          const lbl = toSentenceCase(ST.planCuentas[c] || c);
+          const level = getLevel(c);
+          const children = level < 3 ? allSubs.filter(ch =>
+            ch !== c && ch[0] === digit && getLevel(ch) === level + 1 &&
+            ch.startsWith(c.slice(0, c.length - (level === 1 ? 6 : (level === 2 ? 2 : 0))))
+          ) : [];
+          const hasChildren = children.length > 0;
+          const isExpanded = ST._expTreeExpanded[c];
+          const isBold = level === 1;
+          const indentPx = (indent * 16) + 'px';
+
+          let row = `<tr style="cursor:pointer;"
+            onclick="${hasChildren ? `expTreeToggle('${c}')` : `expSelect('${c}')`}"
+            onmouseover="this.style.background='rgba(56,189,248,0.04)'"
+            onmouseout="this.style.background='transparent'">
+            <td class="cod" style="color:var(--accent);padding-left:calc(14px + ${indentPx});">
+              ${hasChildren ? (isExpanded ? '▾ ' : '▸ ') : '  '}${c}
+            </td>
+            <td style="color:var(--text);font-weight:${isBold ? '600' : '400'};
+              padding-left:${indent > 0 ? '4px' : '14px'};">${lbl}</td>
+            <td class="r ${val < 0 ? 'neg' : ''}" style="${!hasData ? 'color:var(--text3)' : ''}">
+              ${hasData ? fmtKPIDecimal(val) : '—'}
+            </td>
+          </tr>`;
+
+          if (hasChildren && isExpanded) {
+            children.forEach(ch => { row += renderRow(ch, indent + 1); });
+          }
+          return row;
+        };
+
+        l1Accounts.forEach(c => { html += renderRow(c, 0); });
+        html += '</tbody></table>';
+        subList.innerHTML = html;
+      };
+
+      ST._expRenderTree = renderTree;
+      renderTree();
     } else {
       subPanel.style.display = 'none';
     }
@@ -2309,16 +2483,19 @@ function sortExpSubBy(col) {
   renderExpSubTable();
 }
 
+function expTreeToggle(code) {
+  if (!ST._expTreeExpanded) ST._expTreeExpanded = {};
+  ST._expTreeExpanded[code] = !ST._expTreeExpanded[code];
+  if (ST._expRenderTree) ST._expRenderTree();
+}
+
 function toggleExpSubFilter() {
   ST._expSubFilter = !ST._expSubFilter;
-  const btn = document.getElementById('expSubFilterBtn');
-  if (btn) {
-    btn.style.background = ST._expSubFilter ? 'var(--accent)' : 'var(--bg3)';
-    btn.style.color = ST._expSubFilter ? '#fff' : 'var(--text2)';
-    btn.style.borderColor = ST._expSubFilter ? 'var(--accent)' : 'var(--border)';
-    btn.textContent = 'Only accounts with data';
+  if (ST._expRenderTree) {
+    ST._expRenderTree(); // use tree renderer if available
+  } else {
+    renderExpSubTable();
   }
-  renderExpSubTable();
 }
 
 function renderExpSubTable() {
@@ -2467,7 +2644,7 @@ function showTab(tab) {
     requestAnimationFrame(() => showResChart(ST._lastResChart || 'assets'));
   }
   if (tab==='explorador' && Object.keys(ST.planCuentas).length > 0) initExplorer();
-  if (tab==='config') populateConfig();
+  if (tab==='config') { populateConfig(); renderRatingsEditor(); }
   if (tab==='chileanbanks') renderChileanBanks();
 }
 
@@ -2534,21 +2711,59 @@ function sortCBBy(col) {
     ST._cbSort.dir *= -1;
   } else {
     ST._cbSort.col = col;
-    ST._cbSort.dir = col === 'name' ? 1 : -1;
+    ST._cbSort.dir = col === 'name' ? 1 : -1; // numbers default to descending
   }
   renderCBTable();
 }
+
+// ============================================================
+// FELLER RATE RATINGS (source: Feller Rate, 2024-2025)
+// ============================================================
+const FELLER_RATINGS = {
+  1:  'AAA',   // Banco de Chile
+  12: 'AAA',   // Banco Estado (confirmed AAA systemic)
+  14: 'AA+',   // Scotiabank
+  16: 'AAA',   // BCI
+  28: 'AA+',   // Banco BICE
+  37: 'AAA',   // Santander
+  39: 'AAA',   // Itaú
+  59: 'AA',    // BTG Pactual
+};
+// User-editable ratings (loaded from localStorage key 'cbRatings')
+function getCBRatings() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('cbRatings') || '{}');
+    return { ...FELLER_RATINGS, ...stored };
+  } catch { return { ...FELLER_RATINGS }; }
+}
+function saveCBRating(code, val) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('cbRatings') || '{}');
+    if (val) stored[code] = val; else delete stored[code];
+    localStorage.setItem('cbRatings', JSON.stringify(stored));
+  } catch {}
+}
+
+const RATING_COLORS = {
+  'AAA': '#059669', 'AA+': '#10b981', 'AA': '#34d399', 'AA-': '#6ee7b7',
+  'A+': '#f59e0b', 'A': '#fbbf24', 'A-': '#fcd34d',
+  'BBB+': '#f87171', 'BBB': '#ef4444',
+};
 
 function renderCBTable() {
   const el = document.getElementById('cbTable');
   if (!el || !ST._cbData) return;
 
+  const ratings = getCBRatings();
   const { col, dir } = ST._cbSort;
   const bankData = [...ST._cbData].sort((a, b) => {
-    const av = col === 'name' ? a.name : a[col];
-    const bv = col === 'name' ? b.name : b[col];
-    if (col === 'name') return dir * av.localeCompare(bv);
-    return dir * (bv - av);
+    if (col === 'name') return dir * a.name.localeCompare(b.name);
+    if (col === 'rating') {
+      const order = ['AAA','AA+','AA','AA-','A+','A','A-','BBB+','BBB','—'];
+      return dir * (order.indexOf(ratings[a.code]||'—') - order.indexOf(ratings[b.code]||'—'));
+    }
+    // dir: 1 = ascending (smallest first), dir: -1 = descending (largest first)
+    return dir * ((a[col]||0) - (b[col]||0));
   });
 
   const thStyle = `padding:10px 14px;font-size:11px;font-weight:700;letter-spacing:0.5px;
@@ -2559,19 +2774,24 @@ function renderCBTable() {
 
   let html = `<div style="overflow-x:auto"><table class="tbl" style="table-layout:fixed;width:100%;">
     <thead><tr style="background:var(--bg4);">
-      <th style="${thStyleL}width:22%;" onclick="sortCBBy('name')">Bank${arrow('name')}</th>
-      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('assets')">Total Assets${arrow('assets')}</th>
-      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('loans')">Total Loans${arrow('loans')}</th>
-      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('commLoans')">Comm. Loans${arrow('commLoans')}</th>
-      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('liabilities')">Total Liab.${arrow('liabilities')}</th>
-      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('equity')">Equity${arrow('equity')}</th>
-      <th class="r" style="${thStyle}width:13%;" onclick="sortCBBy('eqRatio')">Eq./Assets${arrow('eqRatio')}</th>
+      <th style="${thStyle}width:4%;text-align:center;">#</th>
+      <th style="${thStyleL}width:18%;" onclick="sortCBBy('name')">Bank${arrow('name')}</th>
+      <th style="${thStyle}width:7%;text-align:center;" onclick="sortCBBy('rating')">Rating${arrow('rating')}</th>
+      <th class="r" style="${thStyle}width:12%;" onclick="sortCBBy('assets')">Total Assets${arrow('assets')}</th>
+      <th class="r" style="${thStyle}width:11%;" onclick="sortCBBy('loans')">Total Loans${arrow('loans')}</th>
+      <th class="r" style="${thStyle}width:11%;" onclick="sortCBBy('commLoans')">Comm. Loans${arrow('commLoans')}</th>
+      <th class="r" style="${thStyle}width:11%;" onclick="sortCBBy('liabilities')">Total Liab.${arrow('liabilities')}</th>
+      <th class="r" style="${thStyle}width:11%;" onclick="sortCBBy('equity')">Equity${arrow('equity')}</th>
+      <th class="r" style="${thStyle}width:15%;" onclick="sortCBBy('loansEq')">Loans / Equity${arrow('loansEq')}</th>
     </tr></thead>
     <tbody>`;
 
-  bankData.forEach((b) => {
+  bankData.forEach((b, rowIdx) => {
     const isBTG = b.code === 59;
-    const eqRatio = b.assets ? (b.equity / b.assets * 100).toFixed(1) + '%' : '—';
+    const rating = ratings[b.code] || '—';
+    const rColor = RATING_COLORS[rating] || 'var(--text3)';
+    const loansEq = b.equity ? (b.loans / b.equity).toFixed(1) + 'x' : '—';
+    b.loansEq = b.equity ? b.loans / b.equity : 0; // for sorting
     const rowStyle = isBTG
       ? 'background:rgba(37,99,235,0.08);border-left:3px solid #2563eb;'
       : 'border-left:3px solid transparent;';
@@ -2580,39 +2800,86 @@ function renderCBTable() {
       onclick="loadBankFromTable(${b.code})"
       onmouseover="this.style.background='${isBTG ? 'rgba(37,99,235,0.14)' : 'rgba(56,189,248,0.06)'}'"
       onmouseout="this.style.background='${isBTG ? 'rgba(37,99,235,0.08)' : 'transparent'}'">
+      <td style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3);">${rowIdx + 1}</td>
       <td style="${nameStyle}overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
         ${isBTG ? '★ ' : ''}${b.name}
         <span style="font-size:10px;color:var(--accent);margin-left:6px;opacity:0.7;">→</span>
+      </td>
+      <td style="text-align:center;">
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${rColor};">${rating}</span>
       </td>
       <td class="r">${fmtKPIDecimal(b.assets)}</td>
       <td class="r">${fmtKPIDecimal(b.loans)}</td>
       <td class="r">${fmtKPIDecimal(b.commLoans)}</td>
       <td class="r">${fmtKPIDecimal(b.liabilities)}</td>
       <td class="r" style="font-weight:600;${isBTG?'color:#2563eb;':''}">${fmtKPIDecimal(b.equity)}</td>
-      <td class="r" style="color:var(--text2)">${eqRatio}</td>
+      <td class="r" style="color:var(--text2);font-family:var(--mono);">${loansEq}</td>
     </tr>`;
   });
 
-  // Totals row — same style as header
+  // Totals row
   const tot = bankData.reduce((acc, b) => {
     acc.assets += b.assets; acc.loans += b.loans;
     acc.commLoans += b.commLoans; acc.liabilities += b.liabilities;
     acc.equity += b.equity; return acc;
   }, {assets:0,loans:0,commLoans:0,liabilities:0,equity:0});
-  const totEqRatio = tot.assets ? (tot.equity / tot.assets * 100).toFixed(1) + '%' : '—';
+  const totLoansEq = tot.equity ? (tot.loans / tot.equity).toFixed(1) + 'x' : '—';
 
   html += `<tr style="background:var(--bg4);border-top:2px solid var(--border2);border-left:3px solid transparent;">
+    <td></td>
     <td style="font-weight:700;color:var(--white);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">System Total</td>
+    <td></td>
     <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.assets)}</td>
     <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.loans)}</td>
     <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.commLoans)}</td>
     <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.liabilities)}</td>
     <td class="r" style="font-weight:700;color:var(--white);">${fmtKPIDecimal(tot.equity)}</td>
-    <td class="r" style="font-weight:700;color:var(--text2);">${totEqRatio}</td>
+    <td class="r" style="font-weight:700;color:var(--text2);font-family:var(--mono);">${totLoansEq}</td>
   </tr>`;
 
   html += '</tbody></table></div>';
   el.innerHTML = html;
+}
+
+function renderRatingsEditor() {
+  const el = document.getElementById('ratingsEditor');
+  if (!el || !Object.keys(ST.bancos).length) return;
+
+  const RATING_OPTIONS = ['AAA','AA+','AA','AA-','A+','A','A-','BBB+','BBB','BB+','BB','—'];
+  const stored = getCBRatings();
+  const banks = Object.keys(ST.bancos).map(Number).filter(c => c !== 999).sort((a,b) => a-b);
+
+  let html = `<table class="tbl"><thead><tr>
+    <th>Bank</th>
+    <th style="text-align:center;">Rating (Feller Rate)</th>
+    <th style="text-align:center;">Source</th>
+  </tr></thead><tbody>`;
+
+  banks.forEach(code => {
+    const name = bankName(code);
+    const rating = stored[code] || '—';
+    const isDefault = FELLER_RATINGS[code] !== undefined;
+    const rColor = RATING_COLORS[rating] || 'var(--text3)';
+    html += `<tr>
+      <td style="font-weight:500;">${name}</td>
+      <td style="text-align:center;">
+        <select onchange="updateRating(${code}, this.value)" style="
+          font-family:var(--mono);font-size:12px;font-weight:700;color:${rColor};
+          background:var(--bg3);border:1px solid var(--border);border-radius:4px;
+          padding:3px 6px;cursor:pointer;text-align:center;">
+          ${RATING_OPTIONS.map(r => `<option value="${r}" ${r===rating?'selected':''}>${r}</option>`).join('')}
+        </select>
+      </td>
+      <td style="text-align:center;font-size:11px;color:var(--text3);">${isDefault ? 'Feller Rate' : '✏️ Manual'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function updateRating(code, val) {
+  saveCBRating(code, val === '—' ? null : val);
+  if (ST._cbData) renderCBTable();
 }
 
 function populateConfig() {
