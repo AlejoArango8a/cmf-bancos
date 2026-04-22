@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ALM BTG — Banks Monitor</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -136,9 +137,22 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
   font-size:13px; font-weight:700;
   color:var(--text);
   letter-spacing:0.2px;
+  padding:0 18px;
 }
-.tab.primary.active { color:var(--white); border-bottom-color:var(--accent); border-bottom-width:3px; }
-.tab.primary:hover { color:var(--white); }
+.tab.primary:hover { color:var(--white); background:rgba(56,189,248,0.05); }
+.tab.primary.active {
+  color:var(--accent);
+  border-bottom-color:var(--accent);
+  border-bottom-width:3px;
+  background:rgba(56,189,248,0.06);
+}
+.tab.secondary {
+  font-size:11px; font-weight:400;
+  color:var(--text3);
+  padding:0 12px;
+}
+.tab.secondary:hover { color:var(--text2); }
+.tab.secondary.active { color:var(--text); border-bottom-color:var(--border2); }
 .topbar-right {
   font-family:var(--mono);
   font-size:10px;
@@ -416,9 +430,11 @@ select option { background:var(--bg3); }
     <div class="tabs">
       <button class="tab primary active" onclick="showTab('resumen')">Bank Monitor</button>
       <button class="tab primary" onclick="showTab('chileanbanks')">Chilean Banks</button>
-      <button class="tab" onclick="showTab('balance')">Balance Sheet</button>
-      <button class="tab" onclick="showTab('resultados')">Income Statement</button>
-      <button class="tab" onclick="showTab('explorador')">Account Explorer</button>
+      <button class="tab primary" onclick="showTab('accountview')">Account View</button>
+      <button class="tab primary" onclick="showTab('explorador')">Account Explorer</button>
+      <div style="width:1px;background:var(--border);margin:10px 4px;flex-shrink:0;"></div>
+      <button class="tab secondary" onclick="showTab('balance')">Balance Sheet</button>
+      <button class="tab secondary" onclick="showTab('resultados')">Income Statement</button>
       <button class="tab" onclick="showTab('config')" style="margin-left:auto;">⚙ Config</button>
     </div>
     <div class="topbar-right" style="display:flex;align-items:center;gap:10px;">
@@ -496,7 +512,10 @@ select option { background:var(--bg3); }
           <div class="panel">
             <div class="panel-head">
               <div><div class="panel-title">Banking System Evolution</div><div class="panel-sub">Key indicators for selected period range</div></div>
-              <div class="period-pill" id="rangePill"></div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <div class="period-pill" id="rangePill"></div>
+                <button onclick="exportChartTable()" title="Export to Excel" style="padding:4px 8px;border:1px solid var(--border);background:var(--bg3);color:var(--green);border-radius:4px;cursor:pointer;font-size:11px;">⬇ xlsx</button>
+              </div>
             </div>
             <div class="panel-body">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -538,7 +557,10 @@ select option { background:var(--bg3); }
           <div class="panel">
             <div class="panel-head">
               <div><div class="panel-title">Balance Sheet</div><div class="panel-sub">Last selected period — MM$ CLP</div></div>
-              <div id="balBankTabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <div id="balBankTabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+                <button onclick="exportTableById('balTable','Balance_Sheet')" title="Export to Excel" style="padding:4px 8px;border:1px solid var(--border);background:var(--bg3);color:var(--green);border-radius:4px;cursor:pointer;font-size:11px;">⬇ xlsx</button>
+              </div>
             </div>
             <div class="panel-body">
               <div class="itabs">
@@ -558,7 +580,10 @@ select option { background:var(--bg3); }
           <div class="panel">
             <div class="panel-head">
               <div><div class="panel-title">Income Statement</div><div class="panel-sub">Last period — MM$ CLP</div></div>
-              <div id="resBankTabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <div id="resBankTabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+                <button onclick="exportTableById('resTable','Income_Statement')" title="Export to Excel" style="padding:4px 8px;border:1px solid var(--border);background:var(--bg3);color:var(--green);border-radius:4px;cursor:pointer;font-size:11px;">⬇ xlsx</button>
+              </div>
             </div>
             <div class="panel-body" id="resTable"></div>
           </div>
@@ -589,12 +614,13 @@ select option { background:var(--bg3); }
         <div id="tab-chileanbanks" style="display:none;">
           <div class="panel">
             <div class="panel-head">
-              <div>
+                <div>
                 <div class="panel-title">Chilean Banking System</div>
                 <div class="panel-sub" id="cbPeriodLabel">Ranked by equity — last available period</div>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
                 <span style="font-size:11px;color:var(--text3);font-family:var(--mono);" id="cbCurrencyLabel"></span>
+                <button onclick="exportTableById('cbTable','Chilean_Banks')" title="Export to Excel" style="padding:4px 8px;border:1px solid var(--border);background:var(--bg3);color:var(--green);border-radius:4px;cursor:pointer;font-size:11px;">⬇ xlsx</button>
               </div>
             </div>
             <div class="panel-body" id="cbTable">
@@ -607,6 +633,85 @@ select option { background:var(--bg3); }
           <div class="panel">
             <div class="panel-head"><div class="panel-title">Comparativo</div><div class="panel-sub">Last selected period</div></div>
             <div class="panel-body" id="compTable"></div>
+          </div>
+        </div>
+
+        <!-- ACCOUNT VIEW -->
+        <div id="tab-accountview" style="display:none;">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Account View</div>
+                <div class="panel-sub">Compare all banks for a specific account between two periods</div>
+              </div>
+              <button onclick="exportTableById('avTable','Account_View')" id="avExportBtn" style="display:none;padding:4px 8px;border:1px solid var(--border);background:var(--bg3);color:var(--green);border-radius:4px;cursor:pointer;font-size:11px;">⬇ xlsx</button>
+            </div>
+            <div class="panel-body">
+
+              <!-- Step 1: Group selector -->
+              <div style="margin-bottom:16px;">
+                <div class="sidebar-label" style="margin-bottom:8px;">1. Select account group</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;" id="avGroupBtns">
+                  <button class="avgrp" onclick="avSelectGroup('1')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all 0.15s;">1 — Assets</button>
+                  <button class="avgrp" onclick="avSelectGroup('2')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all 0.15s;">2 — Liabilities</button>
+                  <button class="avgrp" onclick="avSelectGroup('3')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all 0.15s;">3 — Equity</button>
+                  <button class="avgrp" onclick="avSelectGroup('4')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all 0.15s;">4 — Income Statement</button>
+                  <button class="avgrp" onclick="avSelectGroup('5')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all 0.15s;">5 — IS Summary</button>
+                  <button class="avgrp" onclick="avSelectGroup('6')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all 0.15s;">6 — Off-balance</button>
+                  <button class="avgrp" onclick="avSelectGroup('8')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-family:var(--sans);font-size:13px;transition:all 0.15s;">8 — Supplementary</button>
+                  <button class="avgrp" onclick="avSelectGroup('')" style="padding:8px 16px;border-radius:5px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-family:var(--sans);font-size:12px;transition:all 0.15s;">All groups</button>
+                </div>
+              </div>
+
+              <!-- Step 2: Account search + dates + run -->
+              <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-bottom:16px;">
+
+                <!-- Account search -->
+                <div style="flex:1;min-width:300px;">
+                  <div class="sidebar-label" style="margin-bottom:6px;">2. Search account</div>
+                  <div style="display:flex;gap:6px;align-items:center;">
+                    <input id="avAccountInput" type="text" placeholder="Type code or name..."
+                      oninput="avSuggest(this.value)"
+                      onfocus="avSuggest(this.value)"
+                      style="flex:1;padding:8px 12px;font-size:13px;border:1px solid var(--border);
+                        background:var(--bg3);color:var(--text);border-radius:5px;font-family:var(--sans);">
+                    <button onclick="avClearAccount()" title="Clear selection"
+                      style="padding:7px 10px;border:1px solid var(--border);background:var(--bg3);
+                        color:var(--text2);border-radius:5px;cursor:pointer;font-size:14px;flex-shrink:0;"
+                      onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'"
+                      onmouseout="this.style.color='var(--text2)';this.style.borderColor='var(--border)'">✕</button>
+                  </div>
+                  <div id="avSelectedAccount" style="margin-top:4px;font-size:11px;color:var(--accent);font-family:var(--mono);"></div>
+                </div>
+
+                <!-- Dates -->
+                <div>
+                  <div class="sidebar-label" style="margin-bottom:6px;">3. From</div>
+                  <select id="avDesde" style="padding:8px 10px;font-size:12px;border:1px solid var(--border);
+                    background:var(--bg3);color:var(--text);border-radius:5px;font-family:var(--sans);"></select>
+                </div>
+                <div>
+                  <div class="sidebar-label" style="margin-bottom:6px;">To</div>
+                  <select id="avHasta" style="padding:8px 10px;font-size:12px;border:1px solid var(--border);
+                    background:var(--bg3);color:var(--text);border-radius:5px;font-family:var(--sans);"></select>
+                </div>
+
+                <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+                  <div class="sidebar-label" style="margin-bottom:6px;visibility:hidden;">Run</div>
+                  <button onclick="runAccountView()" style="padding:9px 24px;background:#2563eb;color:#fff;
+                    border:none;border-radius:5px;font-family:var(--mono);font-size:12px;font-weight:700;
+                    letter-spacing:1px;cursor:pointer;text-transform:uppercase;white-space:nowrap;">▶ Run</button>
+                </div>
+              </div>
+
+              <!-- Suggestions dropdown — visible below search, not absolutely positioned -->
+              <div id="avSuggestions" style="display:none;border:1px solid var(--border);border-radius:5px;
+                background:var(--bg2);max-height:300px;overflow-y:auto;margin-bottom:16px;
+                box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+
+              <!-- Results -->
+              <div id="avTable"></div>
+            </div>
           </div>
         </div>
 
@@ -645,13 +750,17 @@ select option { background:var(--bg3); }
                 <div class="panel" id="expSubPanel" style="display:none;">
                   <div class="panel-head">
                     <div><div class="panel-title" id="expSubTitle">Sub-accounts</div><div class="panel-sub">Click to drill down · 3 levels</div></div>
+                    <button onclick="exportTableById('expSubList','Sub_accounts')" title="Export to Excel" style="padding:4px 8px;border:1px solid var(--border);background:var(--bg3);color:var(--green);border-radius:4px;cursor:pointer;font-size:11px;">⬇ xlsx</button>
                   </div>
                   <div id="expSubList"></div>
                 </div>
 
                 <!-- Table -->
                 <div class="panel">
-                  <div class="panel-head"><div class="panel-title">Last period values</div></div>
+                  <div class="panel-head">
+                    <div><div class="panel-title">Last period values</div></div>
+                    <button onclick="exportTableById('expTable','Last_Period_Values')" title="Export to Excel" style="padding:4px 8px;border:1px solid var(--border);background:var(--bg3);color:var(--green);border-radius:4px;cursor:pointer;font-size:11px;">⬇ xlsx</button>
+                  </div>
                   <div class="panel-body" id="expTable"></div>
                 </div>
               </div>
@@ -1016,6 +1125,8 @@ function toggleCurrency() {
   if (ST.exp.selected) expSelect(ST.exp.selected);
   // Refresh Chilean Banks if data loaded
   if (ST._cbData) renderCBTable();
+  // Refresh Account View if results showing
+  if (ST._avAccount && document.getElementById('avResultTable')) runAccountView();
 }
 
 function convertAmt(clpMillions) {
@@ -1587,8 +1698,12 @@ function showResChart(tipo) {
 
     // Header: Bank | Period1 | Period2 ...
     let html = `<table class="tbl" style="white-space:nowrap;font-size:12px;"><thead><tr>
-      <th style="white-space:nowrap;min-width:120px;">Bank</th>
-      ${periodos.map(p => `<th class="r" style="white-space:nowrap;min-width:80px;font-size:10px;">${periodLabel(p)}</th>`).join('')}
+      <th style="white-space:nowrap;min-width:120px;" data-export="Bank">Bank</th>
+      ${periodos.map(p => {
+        const mm = p.slice(4,6);
+        const yyyy = p.slice(0,4);
+        return `<th class="r" style="white-space:nowrap;min-width:80px;font-size:10px;" data-export="01/${mm}/${yyyy}">${periodLabel(p)}</th>`;
+      }).join('')}
     </tr></thead><tbody>`;
 
     series.forEach(s => {
@@ -2564,8 +2679,350 @@ function expGoBack() {
 }
 
 // ============================================================
-// FONT SELECTOR & SIZE
+// ACCOUNT VIEW
 // ============================================================
+ST._avAccount = null;
+ST._avGroup = '';
+
+function initAccountView() {
+  const desde = document.getElementById('avDesde');
+  const hasta = document.getElementById('avHasta');
+  if (!desde || !hasta || !ST.periodos.length) return;
+  if (desde.options.length === 0) {
+    ST.periodos.forEach(p => {
+      desde.innerHTML += `<option value="${p}">${periodLabel(p)}</option>`;
+      hasta.innerHTML += `<option value="${p}">${periodLabel(p)}</option>`;
+    });
+    const n = ST.periodos.length;
+    desde.selectedIndex = Math.max(0, n - 13);
+    hasta.selectedIndex = n - 1;
+  }
+}
+
+function avClearAccount() {
+  ST._avAccount = null;
+  const input = document.getElementById('avAccountInput');
+  if (input) { input.value = ''; input.focus(); }
+  const box = document.getElementById('avSuggestions');
+  if (box) box.style.display = 'none';
+  const tableEl = document.getElementById('avTable');
+  if (tableEl) tableEl.innerHTML = '';
+  const exportBtn = document.getElementById('avExportBtn');
+  if (exportBtn) exportBtn.style.display = 'none';
+  // Re-show group accounts if group selected
+  if (ST._avGroup) avSuggest('');
+}
+
+function avSelectGroup(digit) {
+  ST._avGroup = digit;
+  ST._avAccount = null;
+  const input = document.getElementById('avAccountInput');
+  if (input) { input.value = ''; input.placeholder = digit ? `Search in group ${digit}...` : 'Search by code or name...'; }
+  const sel = document.getElementById('avSelectedAccount');
+  if (sel) sel.textContent = '';
+  // Highlight active group button
+  document.querySelectorAll('.avgrp').forEach(b => {
+    const isActive = b.textContent.trim().startsWith(digit || 'All');
+    b.style.background = isActive ? 'rgba(56,189,248,0.12)' : 'var(--bg3)';
+    b.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
+    b.style.color = isActive ? 'var(--accent)' : 'var(--text)';
+    b.style.fontWeight = isActive ? '600' : '400';
+  });
+  // Show all accounts in group immediately
+  avSuggest('');
+}
+
+function avSuggest(query) {
+  const box = document.getElementById('avSuggestions');
+  if (!box) return;
+  const q = query.trim().toLowerCase();
+
+  let matches = Object.entries(ST.planCuentas).filter(([c, l]) => {
+    const groupOk = !ST._avGroup || c[0] === ST._avGroup;
+    const searchOk = !q || c.includes(q) || l.toLowerCase().includes(q);
+    return groupOk && searchOk;
+  });
+
+  // If no query and no group filter, don't show (too many)
+  if (!q && !ST._avGroup) { box.style.display = 'none'; return; }
+
+  matches = matches.slice(0, 80);
+  if (!matches.length) { box.style.display = 'none'; return; }
+
+  box.style.display = 'block';
+  box.innerHTML = matches.map(([c, l]) => `
+    <div onclick="avSelectAccount('${c}')" style="
+      display:flex;gap:12px;align-items:center;padding:8px 14px;
+      cursor:pointer;border-bottom:1px solid var(--border);"
+      onmouseover="this.style.background='rgba(56,189,248,0.06)'"
+      onmouseout="this.style.background='transparent'">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--accent);
+        flex-shrink:0;min-width:80px;">${c}</span>
+      <span style="font-size:12px;color:var(--text);">${toSentenceCase(l)}</span>
+    </div>`).join('');
+}
+
+function avSelectAccount(code) {
+  const label = toSentenceCase(ST.planCuentas[code] || code);
+  const tipo = getTipo(code);
+  ST._avAccount = { code, label, tipo };
+  const input = document.getElementById('avAccountInput');
+  if (input) input.value = `${code} — ${label}`;
+  const box = document.getElementById('avSuggestions');
+  if (box) box.style.display = 'none';
+}
+
+// Reopen suggestions when clicking on a filled input
+document.addEventListener('click', e => {
+  const input = document.getElementById('avAccountInput');
+  const box = document.getElementById('avSuggestions');
+  if (!box) return;
+  if (e.target === input) {
+    avSuggest(input.value.split('—')[0].trim() || '');
+  } else if (!e.target.closest('#avSuggestions')) {
+    box.style.display = 'none';
+  }
+});
+
+async function runAccountView() {
+  const tableEl = document.getElementById('avTable');
+  const exportBtn = document.getElementById('avExportBtn');
+  if (!tableEl) return;
+
+  if (!ST._avAccount) {
+    tableEl.innerHTML = '<div class="empty"><p>Please select an account first</p></div>';
+    return;
+  }
+
+  const desde = document.getElementById('avDesde')?.value;
+  const hasta = document.getElementById('avHasta')?.value;
+  if (!desde || !hasta) return;
+  if (desde > hasta) {
+    tableEl.innerHTML = '<div class="empty"><p>From date must be before To date</p></div>';
+    return;
+  }
+
+  tableEl.innerHTML = '<div style="padding:20px;color:var(--text2);">Loading...</div>';
+  if (exportBtn) exportBtn.style.display = 'none';
+
+  const { code, label, tipo } = ST._avAccount;
+  const allBanks = Object.keys(ST.bancos).map(Number).filter(c => c !== 999);
+  const usdFactor = (ST.currency === 'USD' && ST.usdRate) ? (1 / ST.usdRate) : 1;
+
+  try {
+    const rows = await supa('datos_financieros', {
+      select: 'ins_cod,periodo,monto_total',
+      eq: { tipo, cuenta: code },
+      in: { ins_cod: allBanks, periodo: [desde, hasta] }
+    });
+
+    const getVal = (bank, periodo) =>
+      rows.filter(r => r.ins_cod === bank && r.periodo === periodo)
+          .reduce((s, r) => s + (r.monto_total || 0), 0);
+
+    // Show ALL banks if at least one bank has data in either period
+    const allBankData = allBanks.map(c => ({
+      code: c, name: bankName(c),
+      v1: getVal(c, desde),
+      v2: getVal(c, hasta)
+    }));
+    const anyHasData = allBankData.some(b => b.v1 !== 0 || b.v2 !== 0);
+
+    if (!anyHasData) {
+      tableEl.innerHTML = `<div class="empty">
+        <div class="empty-icon">📭</div>
+        <p>No data found for <strong>${label}</strong> in the selected periods.</p>
+        <p style="font-size:11px;color:var(--text3);margin-top:6px;">Try a different account or date range.</p>
+      </div>`;
+      return;
+    }
+
+    const bankData = allBankData.sort((a, b) => Math.abs(b.v2) - Math.abs(a.v2));
+
+    const thStyle = `padding:10px 14px;font-size:11px;font-weight:700;letter-spacing:0.5px;
+      text-transform:uppercase;color:var(--white);border-bottom:2px solid var(--border2);white-space:nowrap;`;
+    const mm1 = `01/${desde.slice(4,6)}/${desde.slice(0,4)}`;
+    const mm2 = `01/${hasta.slice(4,6)}/${hasta.slice(0,4)}`;
+
+    let html = `
+      <div style="margin-bottom:12px;">
+        <span style="font-size:14px;font-weight:600;color:var(--white);">${code} — ${label}</span>
+        <span style="font-size:11px;color:var(--text3);margin-left:12px;font-family:var(--mono);">
+          ${periodLabel(desde)} → ${periodLabel(hasta)}</span>
+      </div>
+      <div style="overflow-x:auto;">
+      <table class="tbl" id="avResultTable" style="width:100%;">
+        <thead><tr style="background:var(--bg4);">
+          <th style="${thStyle}text-align:left;">Bank</th>
+          <th class="r" style="${thStyle}" data-export="${mm1}">${periodLabel(desde)}</th>
+          <th class="r" style="${thStyle}" data-export="${mm2}">${periodLabel(hasta)}</th>
+          <th class="r" style="${thStyle}">Δ Value</th>
+          <th class="r" style="${thStyle}">Δ %</th>
+        </tr></thead>
+        <tbody>`;
+
+    bankData.forEach(b => {
+      const isBTG = b.code === 59;
+      const dv = (b.v2 - b.v1) * usdFactor;
+      const dp = b.v1 !== 0 ? ((b.v2 - b.v1) / Math.abs(b.v1) * 100) : null;
+      const deltaColor = dv > 0 ? 'var(--green)' : dv < 0 ? 'var(--red)' : 'var(--text3)';
+      const dimRow = '';
+      const rowStyle = isBTG
+        ? 'background:rgba(37,99,235,0.07);border-left:3px solid #2563eb;'
+        : `border-left:3px solid transparent;`;
+      html += `<tr style="${rowStyle}">
+        <td style="font-weight:${isBTG?'700':'500'};color:${isBTG?'#2563eb':'var(--text)'};">
+          ${isBTG?'★ ':''}${b.name}</td>
+        <td class="r">${fmtKPIDecimal(b.v1)}</td>
+        <td class="r">${fmtKPIDecimal(b.v2)}</td>
+        <td class="r" style="color:${deltaColor};font-weight:600;">
+          ${dv >= 0 ? '+' : ''}${fmtKPIDecimal(b.v2 - b.v1)}</td>
+        <td class="r" style="color:${deltaColor};font-family:var(--mono);font-weight:600;">
+          ${dp !== null ? (dp>=0?'+':'')+dp.toFixed(1)+'%' : '—'}</td>
+      </tr>`;
+    });
+
+    // System total
+    const tot1 = bankData.reduce((s,b) => s+b.v1, 0);
+    const tot2 = bankData.reduce((s,b) => s+b.v2, 0);
+    const totDp = tot1 !== 0 ? ((tot2-tot1)/Math.abs(tot1)*100) : null;
+    const totColor = tot2 > tot1 ? 'var(--green)' : tot2 < tot1 ? 'var(--red)' : 'var(--text3)';
+    html += `<tr style="background:var(--bg4);border-top:2px solid var(--border2);font-weight:700;border-left:3px solid transparent;">
+      <td style="color:var(--white);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">System Total</td>
+      <td class="r" style="color:var(--white);">${fmtKPIDecimal(tot1)}</td>
+      <td class="r" style="color:var(--white);">${fmtKPIDecimal(tot2)}</td>
+      <td class="r" style="color:${totColor};font-weight:700;">${tot2>=tot1?'+':''}${fmtKPIDecimal(tot2-tot1)}</td>
+      <td class="r" style="color:${totColor};font-family:var(--mono);font-weight:700;">
+        ${totDp !== null ? (totDp>=0?'+':'')+totDp.toFixed(1)+'%' : '—'}</td>
+    </tr>`;
+
+    html += '</tbody></table></div>';
+    tableEl.innerHTML = html;
+    if (exportBtn) exportBtn.style.display = 'block';
+
+  } catch(e) {
+    tableEl.innerHTML = `<div class="empty"><p>Error: ${e.message}</p></div>`;
+  }
+}
+// ============================================================
+function parseExportVal(text) {
+  if (!text || text === '—' || text === '') return text;
+  const s = text.trim();
+  // Detect negative: starts with - or −, or contains "-USD"
+  const neg = s.startsWith('-') || s.startsWith('−') || /^-\s*USD/i.test(s);
+  // Strip sign, currency, spaces
+  const clean = s.replace(/^[+\-−]\s*(USD\s+|USD|\$\s*)?/i, '')
+                  .replace(/^(USD\s+|USD|\$\s*)/i, '').trim();
+  // Percentage
+  if (clean.endsWith('%')) {
+    const num = parseFloat(clean.slice(0,-1).replace(',','.'));
+    return isNaN(num) ? text : (neg ? -Math.abs(num) : Math.abs(num));
+  }
+  // Suffixes
+  const mult = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 };
+  const m = clean.match(/^([\d.,]+)\s*([TBMK])?x?$/i);
+  if (m) {
+    const num = parseFloat(m[1].replace(',','.'));
+    const factor = mult[m[2]?.toUpperCase()] || 1;
+    return (neg ? -1 : 1) * num * factor;
+  }
+  const plain = parseFloat(clean.replace(',','.'));
+  return isNaN(plain) ? text : (neg ? -Math.abs(plain) : Math.abs(plain));
+}
+
+function parseExportDate(text) {
+  // Convert "Jan 2025" → "Jan-2025" (keep month name for clarity in Excel)
+  if (!text) return text;
+  const months = {
+    Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',
+    Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'
+  };
+  const m = text.trim().match(/^([A-Za-z]{3})\s+(\d{4})$/);
+  if (m && months[m[1]]) {
+    // Return as actual date string Excel can parse: DD/MM/YYYY
+    return `01/${months[m[1]]}/${m[2]}`;
+  }
+  return text;
+}
+
+function tableToData(table) {
+  const rows = [];
+  table.querySelectorAll('tr').forEach(tr => {
+    const cells = [];
+    tr.querySelectorAll('th, td').forEach(td => {
+      // Use data-export attribute if present (overrides display text)
+      const exportVal = td.getAttribute('data-export');
+      if (exportVal !== null) { cells.push(exportVal); return; }
+
+      const raw = td.innerText.trim();
+      // Detect if it's a period header (e.g. "Jan 2025")
+      const isDate = /^[A-Za-z]{3}\s+\d{4}$/.test(raw);
+      if (isDate) { cells.push(parseExportDate(raw)); return; }
+      // Detect if it looks like a financial value
+      const isVal = /^-?\s*(USD\s+)?[\d.,]+\s*[TBMK]?x?%?$/.test(raw) && raw !== '';
+      cells.push(isVal ? parseExportVal(raw) : raw);
+    });
+    if (cells.some(c => c !== '')) rows.push(cells);
+  });
+  return rows;
+}
+
+function addMetaSheet(wb) {
+  const lastP = ST.periodos.length ? ST.periodos[ST.periodos.length - 1] : '—';
+  const lastPLabel = ST.periodos.length ? periodLabel(lastP) : '—';
+  const today = new Date();
+  const todayStr = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
+
+  const metaData = [
+    ['Source', 'Bank Monitor — ALM BTG Pactual Chile'],
+    ['Data source', 'CMF (Comisión para el Mercado Financiero) — Chile'],
+    ['Accounting standard', 'IFRS — effective January 2022 (Circular N° 2.243)'],
+    ['Built by', 'Alejandro Arango Ochoa — ALM BTG Pactual Chile'],
+    ['Data updated through', lastPLabel],
+    ['Exported on', todayStr],
+    ['Currency', ST.currency === 'USD' ? `USD (1 USD = $${Math.round(ST.usdRate || 0).toLocaleString('es-CL')} CLP)` : 'CLP (MM$)'],
+    ['Values', 'Raw numbers (no abbreviation)'],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(metaData);
+  ws['!cols'] = [{ wch: 25 }, { wch: 55 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Source');
+}
+
+function exportTableById(tableContainerId, filename) {
+  const container = document.getElementById(tableContainerId);
+  if (!container) return;
+  // For avTable, look for the inner result table
+  const table = container.id === 'avTable'
+    ? document.getElementById('avResultTable')
+    : (container.tagName === 'TABLE' ? container : container.querySelector('table'));
+  if (!table) { alert('No data to export'); return; }
+  try {
+    const data = tableToData(table);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    // Auto column width
+    const maxLen = data.reduce((acc, row) => {
+      row.forEach((c, i) => { acc[i] = Math.max(acc[i]||8, String(c||'').length + 2); });
+      return acc;
+    }, []);
+    ws['!cols'] = maxLen.map(w => ({ wch: Math.min(w, 40) }));
+    XLSX.utils.book_append_sheet(wb, ws, filename.slice(0, 31));
+    addMetaSheet(wb);
+    const date = new Date().toISOString().slice(0,10).split('-').reverse().join('-');
+    XLSX.writeFile(wb, `${filename}_${date}.xlsx`);
+  } catch(e) {
+    console.error('Export failed:', e);
+    alert('Export failed: ' + e.message);
+  }
+}
+
+function exportChartTable() {
+  const metricLabels = { activos:'Assets', coloc:'Loans', pasivos:'Liabilities',
+    patrimonio:'Equity', utilidad:'Net_Income', mora:'NPL', dep_vista:'Demand_Deposits',
+    dep_plazo:'Time_Deposits', bonos:'Bonds' };
+  const metric = ST._lastResChart || 'data';
+  exportTableById('resChartTable', `Bank_Monitor_${metricLabels[metric] || metric}`);
+}
 ST.fontSize = 14;
 
 function setFont(fontValue, activeId) {
@@ -2632,12 +3089,12 @@ function applyFontSize() {
   if (ST._lastResChart) showResChart(ST._lastResChart);
 }
 function showTab(tab) {
-  ['resumen','chileanbanks','balance','resultados','comparativo','explorador','config'].forEach(t => {
+  ['resumen','chileanbanks','accountview','balance','resultados','comparativo','explorador','config'].forEach(t => {
     const el = document.getElementById('tab-'+t);
     if (el) el.style.display = t===tab?'block':'none';
   });
   document.querySelectorAll('.tab').forEach(b => {
-    const map = {resumen:'Bank Monitor',chileanbanks:'Chilean Banks',balance:'Balance Sheet',resultados:'Income Statement',explorador:'Account Explorer'};
+    const map = {resumen:'Bank Monitor',chileanbanks:'Chilean Banks',accountview:'Account View',balance:'Balance Sheet',resultados:'Income Statement',explorador:'Account Explorer'};
     b.classList.toggle('active', b.textContent.trim()===map[tab]);
   });
   if (tab==='resumen' && ST._series) {
@@ -2646,6 +3103,7 @@ function showTab(tab) {
   if (tab==='explorador' && Object.keys(ST.planCuentas).length > 0) initExplorer();
   if (tab==='config') { populateConfig(); renderRatingsEditor(); }
   if (tab==='chileanbanks') renderChileanBanks();
+  if (tab==='accountview') initAccountView();
 }
 
 function loadBankFromTable(bankCode) {
@@ -2655,8 +3113,6 @@ function loadBankFromTable(bankCode) {
   toggleBank(bankCode, true);
   fillBankList();
   showTab('resumen');
-  document.querySelector('.tab').click(); // ensure tab is active
-  // Switch active tab styling
   document.querySelectorAll('.tab').forEach(b =>
     b.classList.toggle('active', b.textContent.trim() === 'Bank Monitor')
   );
@@ -2721,13 +3177,22 @@ function sortCBBy(col) {
 // ============================================================
 const FELLER_RATINGS = {
   1:  'AAA',   // Banco de Chile
-  12: 'AAA',   // Banco Estado (confirmed AAA systemic)
+  9:  'AA',    // Banco Internacional
+  12: 'AAA',   // Banco Estado
   14: 'AA+',   // Scotiabank
   16: 'AAA',   // BCI
   28: 'AA+',   // Banco BICE
+  31: 'AAA',   // HSBC Bank Chile
   37: 'AAA',   // Santander
   39: 'AAA',   // Itaú
+  41: 'AAA',   // JP Morgan
+  51: 'AA',    // Banco Falabella
+  53: 'AA-',   // Banco Ripley (Fitch)
+  55: 'AA',    // Banco Consorcio
   59: 'AA',    // BTG Pactual
+  60: 'AAA',   // China Construction Bank
+  61: 'AAA',   // Bank of China
+  62: 'AA-',   // Tanner Digital (Fitch)
 };
 // User-editable ratings (loaded from localStorage key 'cbRatings')
 function getCBRatings() {
