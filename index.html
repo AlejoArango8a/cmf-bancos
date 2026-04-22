@@ -68,12 +68,16 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); font-si
     width: 100% !important;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     overflow: visible;
   }
-  .sidebar-block { flex: 1; min-width: 140px; }
-  .bank-scroll { max-height: 160px; }
+  #sidebarToggle { display: flex !important; }
+  #sidebarContent { display: none; }
+  #sidebarContent.open { display: flex; flex-direction: column; }
+  /* Bank list scrollable, button always at bottom */
+  #sidebarContent.open .bank-scroll { max-height: 220px; overflow-y: auto; flex: 1; }
+  #sidebarContent.open .btn-primary { flex-shrink: 0; margin: 8px 12px 12px; width: calc(100% - 24px); }
+  .sidebar-block { min-width: 140px; }
   .main { overflow-y: visible; padding: 10px; }
   .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 6px; }
   .topbar-right { flex-wrap: wrap; gap: 4px; }
@@ -211,6 +215,7 @@ select, input {
 }
 select:focus, input:focus { border-color:var(--accent2); }
 select option { background:var(--bg3); }
+#sidebarContent { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; }
 .bank-scroll { flex:1; overflow-y:auto; padding:6px; }
 .bank-scroll::-webkit-scrollbar { width:3px; }
 .bank-scroll::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
@@ -236,6 +241,7 @@ select option { background:var(--bg3); }
   font-weight:700; letter-spacing:1px;
   cursor:pointer; text-transform:uppercase;
   transition:opacity 0.15s;
+  flex-shrink:0;
 }
 .btn-primary:hover { opacity:0.85; }
 .btn-primary:disabled { opacity:0.3; cursor:not-allowed; }
@@ -342,7 +348,7 @@ select option { background:var(--bg3); }
   font-family:var(--sans); cursor:pointer; transition:all 0.15s; white-space:nowrap;
 }
 .rcbtn:hover { border-color:var(--accent); color:var(--accent); background:rgba(56,189,248,0.06); }
-.rcbtn.active { border-color:var(--accent); background:var(--accent); color:#000; font-weight:600; }
+.rcbtn.active { border-color:#0284c7; background:#0284c7; color:#fff; font-weight:700; }
 
 /* CHART */
 .chart-wrap { position:relative; }
@@ -426,7 +432,7 @@ select option { background:var(--bg3); }
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="brand" style="line-height:1.2;letter-spacing:2px;">ALM BTG<br>BANKS MONITOR</div>
+    <div class="brand" style="line-height:1.2;letter-spacing:2px;cursor:pointer;" onclick="showTab('chileanbanks')" title="Go to home">ALM BTG<br>BANKS MONITOR</div>
     <div class="tabs">
       <button class="tab primary active" onclick="showTab('resumen')">Bank Monitor</button>
       <button class="tab primary" onclick="showTab('chileanbanks')">Chilean Banks</button>
@@ -458,27 +464,37 @@ select option { background:var(--bg3); }
 
   <div class="body">
     <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sidebar-block">
-        <div class="sidebar-label">Period range</div>
-        <div class="range-row">
-          <select id="selDesde"></select>
-          <select id="selHasta"></select>
-        </div>
+    <aside class="sidebar" id="sidebarEl">
+      <!-- Mobile toggle header -->
+      <div id="sidebarToggle" onclick="toggleSidebar()" style="display:none;
+        padding:10px 14px;cursor:pointer;font-size:12px;font-weight:600;
+        color:var(--text);border-bottom:1px solid var(--border);
+        align-items:center;justify-content:space-between;user-select:none;">
+        <span>⚙ Filters &amp; Banks</span>
+        <span id="sidebarArrow">▾</span>
       </div>
-      <div class="sidebar-block">
-        <div class="sidebar-label">Banks <span style="color:var(--text3);font-size:9px;font-weight:normal;">(máx. 3)</span></div>
-        <div style="display:flex;gap:4px;margin-bottom:6px">
-          <button class="btn-sm" onclick="selAll(false)">Clear selection</button>
+      <div id="sidebarContent">
+        <div class="sidebar-block">
+          <div class="sidebar-label">Period range</div>
+          <div class="range-row">
+            <select id="selDesde"></select>
+            <select id="selHasta"></select>
+          </div>
         </div>
-        <div id="bankLimitMsg" style="display:none;font-size:10px;color:var(--yellow);font-family:var(--mono);padding:4px 8px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:3px;margin-bottom:6px;">
-          Maximum 3 banks at a time
+        <div class="sidebar-block">
+          <div class="sidebar-label">Banks <span style="color:var(--text3);font-size:9px;font-weight:normal;">(máx. 3)</span></div>
+          <div style="display:flex;gap:4px;margin-bottom:6px">
+            <button class="btn-sm" onclick="selAll(false)">Clear selection</button>
+          </div>
+          <div id="bankLimitMsg" style="display:none;font-size:10px;color:var(--yellow);font-family:var(--mono);padding:4px 8px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:3px;margin-bottom:6px;">
+            Maximum 3 banks at a time
+          </div>
         </div>
+        <div class="bank-scroll" id="bankList">
+          <div class="empty"><div class="empty-icon">🏦</div><p>Loading banks...</p></div>
+        </div>
+        <button class="btn-primary" id="btnRun" onclick="run()" disabled>▶ Load selected banks</button>
       </div>
-      <div class="bank-scroll" id="bankList">
-        <div class="empty"><div class="empty-icon">🏦</div><p>Loading banks...</p></div>
-      </div>
-      <button class="btn-primary" id="btnRun" onclick="run()" disabled>▶ Load selected banks</button>
     </aside>
 
     <!-- MAIN -->
@@ -706,7 +722,7 @@ select option { background:var(--bg3); }
 
               <!-- Suggestions dropdown — visible below search, not absolutely positioned -->
               <div id="avSuggestions" style="display:none;border:1px solid var(--border);border-radius:5px;
-                background:var(--bg2);max-height:300px;overflow-y:auto;margin-bottom:16px;
+                background:var(--bg2);max-height:480px;overflow-y:auto;margin-bottom:16px;
                 box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
 
               <!-- Results -->
@@ -840,14 +856,31 @@ select option { background:var(--bg3); }
               </div>
             </div>
 
-            <!-- Ratings editor -->
+            <!-- Visit counter -->
             <div class="panel">
-              <div class="panel-head">
-                <div><div class="panel-title">Bank Ratings (Feller Rate)</div><div class="panel-sub">Edit ratings for banks not automatically found</div></div>
-                <button onclick="renderRatingsEditor()" style="padding:4px 10px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);border-radius:4px;cursor:pointer;font-size:11px;font-family:var(--sans);">↺ Refresh</button>
+              <div class="panel-head"><div class="panel-title">Usage Statistics</div></div>
+              <div class="panel-body" style="display:flex;flex-direction:column;gap:16px;">
+                <div style="display:flex;gap:32px;flex-wrap:wrap;">
+                  <div>
+                    <div class="sidebar-label">Total visits</div>
+                    <div style="font-size:32px;font-weight:700;color:var(--accent);margin-top:4px;font-family:var(--mono);" id="visitCount">—</div>
+                  </div>
+                  <div>
+                    <div class="sidebar-label">Your visits</div>
+                    <div style="font-size:32px;font-weight:700;color:var(--white);margin-top:4px;font-family:var(--mono);" id="myVisitCount">—</div>
+                  </div>
+                  <div>
+                    <div class="sidebar-label">Your location</div>
+                    <div style="font-size:16px;font-weight:600;color:var(--white);margin-top:4px;" id="visitCountry">—</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="sidebar-label">Visits by country</div>
+                  <div id="visitsByCountry" style="margin-top:8px;display:flex;flex-direction:column;gap:4px;"></div>
+                </div>
               </div>
-              <div class="panel-body" id="ratingsEditor"></div>
             </div>
+
           </div>
         </div>
 
@@ -965,6 +998,17 @@ async function init() {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('btnRun').disabled = false;
     setStatus('ok', `${ST.periodos.length} periods available`);
+
+    // Default: load BTG Pactual (59) for last 12 months, show Chilean Banks
+    const n = ST.periodos.length;
+    const desdeIdx = Math.max(0, n - 13);
+    document.getElementById('selDesde').selectedIndex = desdeIdx;
+    document.getElementById('selHasta').selectedIndex = n - 1;
+    toggleBank(59, true);
+    fillBankList();
+    await run();
+    showTab('resumen');
+    trackVisit(); // fire and forget
 
   } catch(e) {
     setStatus('error', 'Connection error');
@@ -1205,7 +1249,9 @@ function fillBankList() {
   allCodes.forEach(c => {
     const name = bankName(c);
     const patrimonio = ST._patrimonioMap?.[c];
-    const patLabel = patrimonio ? `<span class="bank-code" style="font-size:9px;">${fmtKPI(patrimonio)}</span>` : `<span class="bank-code">${String(c).padStart(3,'0')}</span>`;
+    const patLabel = patrimonio
+      ? `<span class="bank-code" style="font-size:9px;">${fmtKPI(patrimonio)}</span>`
+      : `<span class="bank-code" style="font-size:9px;opacity:0.3;">—</span>`;
     const item = document.createElement('div');
     item.className = 'bank-item' + (ST.selected.has(c) ? ' on' : '');
     item.innerHTML = `
@@ -2357,8 +2403,10 @@ function getExpLabel(c) {
 function getTipo(code) {
   const p = code[0];
   if (p==='1'||p==='2'||p==='3') return 'b1';
-  if (p==='4'||p==='5'||p==='6') return 'r1';
-  return 'c1';
+  if (p==='4'||p==='5') return 'r1';
+  if (p==='6') return 'b1'; // off-balance stored as b1
+  if (p==='8') return 'c1';
+  return 'b1';
 }
 
 function renderExpGrid() {
@@ -2421,13 +2469,13 @@ async function expSelect(code) {
     const banks = [...ST.selected];
     const lastP = periodos[periodos.length - 1];
 
-    // Fetch main account data
-    const rows = await supa('datos_financieros', {
-      select: 'periodo,ins_cod,cuenta,monto_total',
-      eq: { tipo, cuenta: code },
-      in: { periodo: periodos, ins_cod: banks },
-      order: 'periodo.asc'
-    });
+    // Fetch main account data — query all tipos to cover b1/r1/c1
+    const [eb1, er1, ec1] = await Promise.all([
+      supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'b1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
+      supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'r1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
+      supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'c1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
+    ]);
+    const rows = [...eb1, ...er1, ...ec1];
 
     const usdFactor = (ST.currency === 'USD' && ST.usdRate) ? (1 / ST.usdRate) : 1;
     const CHART_COLORS = ['#38bdf8','#f59e0b','#f87171','#a78bfa'];
@@ -2487,12 +2535,13 @@ async function expSelect(code) {
       subPanel.style.display = 'block';
       document.getElementById('expSubTitle').textContent = `Sub-accounts`;
 
-      // Fetch last period values for all sub-accounts (batch)
-      const subRows = await supa('datos_financieros', {
-        select: 'cuenta,ins_cod,monto_total',
-        eq: { tipo, periodo: lastP },
-        in: { cuenta: allSubs, ins_cod: banks }
-      });
+      // Fetch last period values for all sub-accounts — all tipos
+      const [sb1, sr1, sc1] = await Promise.all([
+        supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'b1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
+        supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'r1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
+        supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'c1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
+      ]);
+      const subRows = [...sb1, ...sr1, ...sc1];
 
       const getSubVal = c => subRows
         .filter(r => r.cuenta === c && banks.includes(r.ins_cod))
@@ -2683,6 +2732,7 @@ function expGoBack() {
 // ============================================================
 ST._avAccount = null;
 ST._avGroup = '';
+ST._expSubFilter = true; // default: only show accounts with data
 
 function initAccountView() {
   const desde = document.getElementById('avDesde');
@@ -2697,6 +2747,16 @@ function initAccountView() {
     desde.selectedIndex = Math.max(0, n - 13);
     hasta.selectedIndex = n - 1;
   }
+  // Preselect Assets group if none selected yet
+  if (!ST._avGroup) avSelectGroup('1');
+}
+
+function toggleSidebar() {
+  const content = document.getElementById('sidebarContent');
+  const arrow = document.getElementById('sidebarArrow');
+  if (!content) return;
+  const isOpen = content.classList.toggle('open');
+  if (arrow) arrow.textContent = isOpen ? '▴' : '▾';
 }
 
 function avClearAccount() {
@@ -2732,34 +2792,120 @@ function avSelectGroup(digit) {
   avSuggest('');
 }
 
+// AV tree expanded state
+ST._avTreeExpanded = {};
+
+function avGetLevel(c) {
+  // Root: single digit group (x00000000 or x000000000 etc — all zeros after first digit)
+  if (/^[1-9]0+$/.test(c)) return 0;
+  const trailing = c.match(/0+$/)?.[0].length || 0;
+  const len = c.length;
+  // Level 1: 4+ trailing zeros (e.g. 1100000000, 141000000)
+  if (trailing >= 4) return 1;
+  // Level 2: 1-3 trailing zeros (e.g. 141500000, 141510000)
+  if (trailing >= 1) return 2;
+  // Level 3: no trailing zeros (leaf)
+  return 3;
+}
+
 function avSuggest(query) {
   const box = document.getElementById('avSuggestions');
   if (!box) return;
   const q = query.trim().toLowerCase();
 
-  let matches = Object.entries(ST.planCuentas).filter(([c, l]) => {
-    const groupOk = !ST._avGroup || c[0] === ST._avGroup;
-    const searchOk = !q || c.includes(q) || l.toLowerCase().includes(q);
-    return groupOk && searchOk;
-  });
+  // If typing a search query — show flat filtered list
+  if (q && !/^\d{3,}$/.test(q)) {
+    const matches = Object.entries(ST.planCuentas).filter(([c, l]) => {
+      const groupOk = !ST._avGroup || c[0] === ST._avGroup;
+      return groupOk && (c.includes(q) || l.toLowerCase().includes(q));
+    }).slice(0, 120);
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    box.innerHTML = `<div style="padding:5px 14px;font-size:10px;color:var(--text3);
+      font-family:var(--mono);border-bottom:1px solid var(--border);">
+      ${matches.length} results for "${q}"</div>` +
+      matches.map(([c, l]) => avRowHtml(c, l, 0, false)).join('');
+    return;
+  }
 
-  // If no query and no group filter, don't show (too many)
-  if (!q && !ST._avGroup) { box.style.display = 'none'; return; }
+  // No query — show hierarchical tree
+  if (!ST._avGroup && !q) { box.style.display = 'none'; return; }
 
-  matches = matches.slice(0, 80);
-  if (!matches.length) { box.style.display = 'none'; return; }
+  const digit = ST._avGroup;
+  const allInGroup = Object.keys(ST.planCuentas)
+    .filter(c => (!digit || c[0] === digit) && avGetLevel(c) > 0)
+    .sort();
+
+  // Level 1 roots
+  const l1 = allInGroup.filter(c => avGetLevel(c) === 1);
 
   box.style.display = 'block';
-  box.innerHTML = matches.map(([c, l]) => `
-    <div onclick="avSelectAccount('${c}')" style="
-      display:flex;gap:12px;align-items:center;padding:8px 14px;
-      cursor:pointer;border-bottom:1px solid var(--border);"
-      onmouseover="this.style.background='rgba(56,189,248,0.06)'"
-      onmouseout="this.style.background='transparent'">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--accent);
-        flex-shrink:0;min-width:80px;">${c}</span>
-      <span style="font-size:12px;color:var(--text);">${toSentenceCase(l)}</span>
-    </div>`).join('');
+  avRenderTree(box, digit, l1, allInGroup);
+}
+
+function avRenderTree(box, digit, l1, allInGroup) {
+  const total = allInGroup.length;
+  let html = `<div style="padding:5px 14px;font-size:10px;color:var(--text3);
+    font-family:var(--mono);border-bottom:1px solid var(--border);">
+    ${total} ACCOUNTS IN GROUP ${digit} — click ▸ to expand</div>`;
+
+  const renderNode = (c, indent) => {
+    const level = avGetLevel(c);
+    const label = toSentenceCase(ST.planCuentas[c] || c);
+    const isExpanded = ST._avTreeExpanded[c];
+
+    // Find direct children: share the significant (non-zero) prefix of parent
+    const trailingZeros = c.match(/0+$/)?.[0].length || 0;
+    const sigPart = c.slice(0, c.length - trailingZeros);
+    const children = level < 3
+      ? allInGroup.filter(ch => {
+          if (ch === c) return false;
+          if (avGetLevel(ch) !== level + 1) return false;
+          return ch.startsWith(sigPart);
+        })
+      : [];
+    const hasKids = children.length > 0;
+
+    let row = avRowHtml(c, label, indent, hasKids, isExpanded);
+    if (hasKids && isExpanded) {
+      children.forEach(ch => { row += renderNode(ch, indent + 1); });
+    }
+    return row;
+  };
+
+  l1.forEach(c => { html += renderNode(c, 0); });
+  box.innerHTML = html;
+}
+
+function avRowHtml(c, label, indent, hasKids, isExpanded) {
+  const indentPx = (indent * 18) + 'px';
+  const icon = hasKids ? (isExpanded ? '▾ ' : '▸ ') : '  ';
+  const action = hasKids
+    ? `avTreeToggle('${c}')`
+    : `avSelectAccount('${c}')`;
+  return `<div onclick="${action}" style="
+    display:flex;gap:10px;align-items:center;
+    padding:7px 14px 7px calc(14px + ${indentPx});
+    cursor:pointer;border-bottom:1px solid var(--border);"
+    onmouseover="this.style.background='rgba(56,189,248,0.06)'"
+    onmouseout="this.style.background='transparent'">
+    <span style="font-family:var(--mono);font-size:10px;color:${hasKids?'var(--text2)':'var(--accent)'};
+      flex-shrink:0;min-width:90px;">${icon}${c}</span>
+    <span style="font-size:12px;color:${hasKids?'var(--text)':'var(--text)'};
+      font-weight:${indent===0?'600':'400'};">${label}</span>
+  </div>`;
+}
+
+function avTreeToggle(code) {
+  ST._avTreeExpanded[code] = !ST._avTreeExpanded[code];
+  // Re-render tree
+  const digit = ST._avGroup;
+  const allInGroup = Object.keys(ST.planCuentas)
+    .filter(c => (!digit || c[0] === digit) && avGetLevel(c) > 0)
+    .sort();
+  const l1 = allInGroup.filter(c => avGetLevel(c) === 1);
+  const box = document.getElementById('avSuggestions');
+  if (box) avRenderTree(box, digit, l1, allInGroup);
 }
 
 function avSelectAccount(code) {
@@ -2810,11 +2956,13 @@ async function runAccountView() {
   const usdFactor = (ST.currency === 'USD' && ST.usdRate) ? (1 / ST.usdRate) : 1;
 
   try {
-    const rows = await supa('datos_financieros', {
-      select: 'ins_cod,periodo,monto_total',
-      eq: { tipo, cuenta: code },
-      in: { ins_cod: allBanks, periodo: [desde, hasta] }
-    });
+    // Query all tipos in parallel — merge results so we never miss data
+    const [rb1, rr1, rc1] = await Promise.all([
+      supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'b1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
+      supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'r1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
+      supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'c1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
+    ]);
+    const rows = [...rb1, ...rr1, ...rc1];
 
     const getVal = (bank, periodo) =>
       rows.filter(r => r.ins_cod === bank && r.periodo === periodo)
@@ -2905,6 +3053,80 @@ async function runAccountView() {
   }
 }
 // ============================================================
+// ============================================================
+// VISIT COUNTER
+// ============================================================
+async function trackVisit() {
+  try {
+    let country = 'Unknown', countryCode = '??';
+    try {
+      const geo = await fetch('https://ipapi.co/json/');
+      if (geo.ok) { const d = await geo.json(); country = d.country_name || 'Unknown'; countryCode = d.country_code || '??'; }
+    } catch {}
+
+    // My visits — localStorage
+    const myCount = (parseInt(localStorage.getItem('btg_my_visits') || '0') + 1);
+    localStorage.setItem('btg_my_visits', myCount);
+
+    // Log this visit to Supabase
+    await fetch(`${SUPA_URL}/rest/v1/carga_log`, {
+      method: 'POST',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ periodo: 'visit', estado: country, archivo: countryCode })
+    });
+
+    ST._myVisits = myCount;
+    ST._myCountry = country;
+    ST._myCountryCode = countryCode;
+  } catch(e) { console.warn('Visit tracking:', e.message); }
+}
+
+async function loadVisitStats() {
+  try {
+    const rows = await supa('carga_log', { select: 'estado,archivo', eq: { periodo: 'visit' } });
+
+    const total = rows.length;
+    const countryEl = document.getElementById('visitCount');
+    if (countryEl) countryEl.textContent = total.toLocaleString();
+
+    const myEl = document.getElementById('myVisitCount');
+    if (myEl) myEl.textContent = (ST._myVisits || parseInt(localStorage.getItem('btg_my_visits') || '0')).toLocaleString();
+
+    const myCode = ST._myCountryCode || '??';
+    const myCountry = ST._myCountry || '—';
+    const flagEmoji = code => code?.length === 2
+      ? String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65))
+      : '🌐';
+    const locEl = document.getElementById('visitCountry');
+    if (locEl) locEl.textContent = `${flagEmoji(myCode)} ${myCountry}`;
+
+    // By country
+    const byC = {};
+    rows.forEach(r => {
+      const k = r.estado || 'Unknown';
+      if (!byC[k]) byC[k] = { count: 0, code: r.archivo };
+      byC[k].count++;
+    });
+    const sorted = Object.entries(byC).sort((a,b) => b[1].count - a[1].count);
+    const maxV = sorted[0]?.[1].count || 1;
+    const el = document.getElementById('visitsByCountry');
+    if (el) {
+      el.innerHTML = sorted.map(([c, d]) => {
+        const pct = (d.count / maxV * 100).toFixed(0);
+        return `<div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:140px;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${flagEmoji(d.code)} ${c}</div>
+          <div style="flex:1;background:var(--bg3);border-radius:3px;height:14px;">
+            <div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;opacity:0.7;"></div>
+          </div>
+          <div style="width:30px;font-family:var(--mono);font-size:11px;color:var(--text2);text-align:right;">${d.count}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) { console.warn('loadVisitStats:', e.message); }
+}
+
 function parseExportVal(text) {
   if (!text || text === '—' || text === '') return text;
   const s = text.trim();
@@ -3101,7 +3323,7 @@ function showTab(tab) {
     requestAnimationFrame(() => showResChart(ST._lastResChart || 'assets'));
   }
   if (tab==='explorador' && Object.keys(ST.planCuentas).length > 0) initExplorer();
-  if (tab==='config') { populateConfig(); renderRatingsEditor(); }
+  if (tab==='config') { populateConfig(); loadVisitStats(); }
   if (tab==='chileanbanks') renderChileanBanks();
   if (tab==='accountview') initAccountView();
 }
@@ -3189,6 +3411,7 @@ const FELLER_RATINGS = {
   51: 'AA',    // Banco Falabella
   53: 'AA-',   // Banco Ripley (Fitch)
   55: 'AA',    // Banco Consorcio
+  49: 'AA+',   // Banco Security (merged into BICE Oct 2025)
   59: 'AA',    // BTG Pactual
   60: 'AAA',   // China Construction Bank
   61: 'AAA',   // Bank of China
