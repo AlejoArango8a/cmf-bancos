@@ -1043,6 +1043,8 @@ async function init() {
     setStatus('loading', 'Connecting...');
 
     let bootstrapFromApi = false;
+    let bootstrapPlanCuentas = false;
+    let bootstrapPatrimonio = false;
     if (API_BASE_URL) {
       try {
         const r = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/bootstrap`);
@@ -1051,6 +1053,25 @@ async function init() {
           ST.periodos = j.periodos;
           j.instituciones.forEach(row => { ST.bancos[row.codigo] = row.razon_social; });
           bootstrapFromApi = true;
+
+          // plan_cuentas (Grupo 1)
+          if (Array.isArray(j.planCuentas) && j.planCuentas.length) {
+            j.planCuentas.forEach(row => { ST.planCuentas[row.cuenta] = row.descripcion; });
+            console.log(`Plan de cuentas (API): ${j.planCuentas.length} cuentas cargadas`);
+            bootstrapPlanCuentas = true;
+          }
+
+          // patrimonio ranking (Grupo 1)
+          if (Array.isArray(j.patrimonioRows) && j.patrimonioRows.length) {
+            const patMap = {};
+            j.patrimonioRows.forEach(row => { patMap[row.ins_cod] = (patMap[row.ins_cod] || 0) + row.monto_total; });
+            ST._patrimonioMap = patMap;
+            ST._patrimonioRanking = Object.keys(patMap)
+              .map(Number)
+              .filter(c => c !== 999)
+              .sort((a, b) => (patMap[b] || 0) - (patMap[a] || 0));
+            bootstrapPatrimonio = true;
+          }
         } else {
           console.warn('API bootstrap no OK, usando Supabase directo:', j.error || r.status);
         }
@@ -1077,28 +1098,31 @@ async function init() {
 
     if (!ST.periodos.length) throw new Error('No data found in database');
 
-    // Load plan de cuentas — paginated to guarantee all rows
-    const plan = await supaAll('plan_cuentas', { select: 'cuenta,descripcion', order: 'cuenta.asc' });
-    plan.forEach(r => ST.planCuentas[r.cuenta] = r.descripcion);
-    console.log(`Plan de cuentas: ${plan.length} accounts loaded`);
+    // Load plan de cuentas — paginated to guarantee all rows (fallback si no vino en bootstrap)
+    if (!bootstrapPlanCuentas) {
+      const plan = await supaAll('plan_cuentas', { select: 'cuenta,descripcion', order: 'cuenta.asc' });
+      plan.forEach(r => ST.planCuentas[r.cuenta] = r.descripcion);
+      console.log(`Plan de cuentas (Supabase directo): ${plan.length} accounts loaded`);
+    }
 
-    // Fetch patrimonio ranking for bank list sorting
-    const lastP = ST.periodos[ST.periodos.length - 1];
-    try {
-      const patRows = await supa('datos_financieros', {
-        select: 'ins_cod,monto_total',
-        eq: { tipo: 'b1', cuenta: '300000000', periodo: lastP }
-      });
-      const patMap = {};
-      patRows.forEach(r => { patMap[r.ins_cod] = (patMap[r.ins_cod] || 0) + r.monto_total; });
-      ST._patrimonioMap = patMap;
-      // Sort codes by patrimonio descending (exclude 999)
-      ST._patrimonioRanking = Object.keys(patMap)
-        .map(Number)
-        .filter(c => c !== 999)
-        .sort((a, b) => (patMap[b] || 0) - (patMap[a] || 0));
-    } catch(e) {
-      console.warn('No se pudo cargar ranking de patrimonio:', e);
+    // Fetch patrimonio ranking for bank list sorting (fallback si no vino en bootstrap)
+    if (!bootstrapPatrimonio) {
+      const lastP = ST.periodos[ST.periodos.length - 1];
+      try {
+        const patRows = await supa('datos_financieros', {
+          select: 'ins_cod,monto_total',
+          eq: { tipo: 'b1', cuenta: '300000000', periodo: lastP }
+        });
+        const patMap = {};
+        patRows.forEach(r => { patMap[r.ins_cod] = (patMap[r.ins_cod] || 0) + r.monto_total; });
+        ST._patrimonioMap = patMap;
+        ST._patrimonioRanking = Object.keys(patMap)
+          .map(Number)
+          .filter(c => c !== 999)
+          .sort((a, b) => (patMap[b] || 0) - (patMap[a] || 0));
+      } catch(e) {
+        console.warn('No se pudo cargar ranking de patrimonio:', e);
+      }
     }
 
     // Fill period selectors
