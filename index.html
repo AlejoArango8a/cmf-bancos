@@ -3371,7 +3371,7 @@ async function trackVisit() {
           'Authorization': `Bearer ${SUPA_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ country_name: country, country_code: countryCode })
+        body: JSON.stringify({ p_country_name: country, p_country_code: countryCode })
       });
     } catch {}
 
