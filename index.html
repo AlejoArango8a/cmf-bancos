@@ -1037,6 +1037,24 @@ async function supaAll(table, params = {}, pageSize = 1000) {
 
 // ============================================================
 // INIT
+// Helper: llama a /api/datos con fallback silencioso (devuelve null si falla)
+async function apiDatos(params) {
+  if (!API_BASE_URL) return null;
+  try {
+    const r = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/datos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    const j = await r.json();
+    if (r.ok && j.ok && Array.isArray(j.rows)) return j.rows;
+    console.warn('API /datos no OK:', j.error || r.status);
+  } catch (e) {
+    console.warn('API /datos falló:', e);
+  }
+  return null;
+}
+
 // ============================================================
 async function init() {
   try {
@@ -1841,18 +1859,19 @@ async function showROEChart() {
     const lastMonth = parseInt(lastP.slice(4, 6));
     const allBanks = Object.keys(ST.bancos).map(Number).filter(c => c !== 999);
 
-    const [rows, equityRows] = await Promise.all([
-      supa('datos_financieros', {
-        select: 'ins_cod,monto_total',
-        eq: { tipo: 'r1', periodo: lastP, cuenta: '590000000' },
-        in: { ins_cod: allBanks }
-      }),
-      supa('datos_financieros', {
-        select: 'ins_cod,monto_total',
-        eq: { tipo: 'b1', periodo: lastP, cuenta: '300000000' },
-        in: { ins_cod: allBanks }
-      })
+    const [apiUtil, apiEq] = await Promise.all([
+      apiDatos({ tipo: 'r1', cuentas: ['590000000'], periodos: [lastP], bancos: allBanks, select: 'ins_cod,monto_total' }),
+      apiDatos({ tipo: 'b1', cuentas: ['300000000'], periodos: [lastP], bancos: allBanks, select: 'ins_cod,monto_total' })
     ]);
+    let rows, equityRows;
+    if (apiUtil && apiEq) {
+      rows = apiUtil; equityRows = apiEq;
+    } else {
+      [rows, equityRows] = await Promise.all([
+        supa('datos_financieros', { select: 'ins_cod,monto_total', eq: { tipo: 'r1', periodo: lastP, cuenta: '590000000' }, in: { ins_cod: allBanks } }),
+        supa('datos_financieros', { select: 'ins_cod,monto_total', eq: { tipo: 'b1', periodo: lastP, cuenta: '300000000' }, in: { ins_cod: allBanks } })
+      ]);
+    }
 
     const getUtil = c => rows.filter(r => r.ins_cod === c).reduce((s,r) => s+(r.monto_total||0), 0);
     const getEq   = c => equityRows.filter(r => r.ins_cod === c).reduce((s,r) => s+(r.monto_total||0), 0);
@@ -2694,12 +2713,15 @@ async function expSelect(code) {
     const lastP = periodos[periodos.length - 1];
 
     // Fetch main account data — query all tipos to cover b1/r1/c1
-    const [eb1, er1, ec1] = await Promise.all([
-      supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'b1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
-      supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'r1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
-      supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'c1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
-    ]);
-    const rows = [...eb1, ...er1, ...ec1];
+    let rows = await apiDatos({ tipos: ['b1','r1','c1'], cuentas: [code], periodos, bancos: banks, select: 'periodo,ins_cod,cuenta,monto_total' });
+    if (!rows) {
+      const [eb1, er1, ec1] = await Promise.all([
+        supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'b1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
+        supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'r1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
+        supa('datos_financieros', { select: 'periodo,ins_cod,cuenta,monto_total', eq: { tipo: 'c1', cuenta: code }, in: { periodo: periodos, ins_cod: banks }, order: 'periodo.asc' }),
+      ]);
+      rows = [...eb1, ...er1, ...ec1];
+    }
 
     const usdFactor = (ST.currency === 'USD' && ST.usdRate) ? (1 / ST.usdRate) : 1;
     const bankCodes = banks.filter(c => c !== 999);
@@ -2759,12 +2781,15 @@ async function expSelect(code) {
       document.getElementById('expSubTitle').textContent = `Sub-accounts`;
 
       // Fetch last period values for all sub-accounts — all tipos
-      const [sb1, sr1, sc1] = await Promise.all([
-        supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'b1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
-        supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'r1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
-        supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'c1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
-      ]);
-      const subRows = [...sb1, ...sr1, ...sc1];
+      let subRows = await apiDatos({ tipos: ['b1','r1','c1'], cuentas: allSubs, periodos: [lastP], bancos: banks, select: 'cuenta,ins_cod,monto_total' });
+      if (!subRows) {
+        const [sb1, sr1, sc1] = await Promise.all([
+          supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'b1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
+          supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'r1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
+          supa('datos_financieros', { select: 'cuenta,ins_cod,monto_total', eq: { tipo: 'c1', periodo: lastP }, in: { cuenta: allSubs, ins_cod: banks } }),
+        ]);
+        subRows = [...sb1, ...sr1, ...sc1];
+      }
 
       const getSubVal = c => subRows
         .filter(r => r.cuenta === c && banks.includes(r.ins_cod))
@@ -3211,12 +3236,15 @@ async function runAccountView() {
 
   try {
     // Query all tipos in parallel — merge results so we never miss data
-    const [rb1, rr1, rc1] = await Promise.all([
-      supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'b1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
-      supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'r1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
-      supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'c1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
-    ]);
-    const rows = [...rb1, ...rr1, ...rc1];
+    let rows = await apiDatos({ tipos: ['b1','r1','c1'], cuentas: [code], periodos: [desde, hasta], bancos: allBanks, select: 'ins_cod,periodo,monto_total' });
+    if (!rows) {
+      const [rb1, rr1, rc1] = await Promise.all([
+        supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'b1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
+        supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'r1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
+        supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'c1', cuenta: code }, in: { ins_cod: allBanks, periodo: [desde, hasta] } }),
+      ]);
+      rows = [...rb1, ...rr1, ...rc1];
+    }
 
     const getVal = (bank, periodo) =>
       rows.filter(r => r.ins_cod === bank && r.periodo === periodo)
@@ -3667,18 +3695,19 @@ async function renderChileanBanks() {
       .filter(p => ST.periodos.includes(p)));
     const fetchPeriods = [...fetchSet];
 
-    const [rows, incomeRows] = await Promise.all([
-      supa('datos_financieros', {
-        select: 'ins_cod,cuenta,monto_total',
-        eq: { tipo: 'b1', periodo: lastP },
-        in: { ins_cod: allBanks, cuenta: cuentas }
-      }),
-      supa('datos_financieros', {
-        select: 'ins_cod,periodo,monto_total',
-        eq: { tipo: 'r1', cuenta: '590000000' },
-        in: { ins_cod: allBanks, periodo: fetchPeriods }
-      })
+    const [apiRows, apiInc] = await Promise.all([
+      apiDatos({ tipo: 'b1', cuentas, periodos: [lastP], bancos: allBanks, select: 'ins_cod,cuenta,monto_total' }),
+      apiDatos({ tipo: 'r1', cuentas: ['590000000'], periodos: fetchPeriods, bancos: allBanks, select: 'ins_cod,periodo,monto_total' })
     ]);
+    let rows, incomeRows;
+    if (apiRows && apiInc) {
+      rows = apiRows; incomeRows = apiInc;
+    } else {
+      [rows, incomeRows] = await Promise.all([
+        supa('datos_financieros', { select: 'ins_cod,cuenta,monto_total', eq: { tipo: 'b1', periodo: lastP }, in: { ins_cod: allBanks, cuenta: cuentas } }),
+        supa('datos_financieros', { select: 'ins_cod,periodo,monto_total', eq: { tipo: 'r1', cuenta: '590000000' }, in: { ins_cod: allBanks, periodo: fetchPeriods } })
+      ]);
+    }
 
     const getVal = (bank, cuenta) =>
       rows.filter(r => r.ins_cod === bank && r.cuenta === cuenta)
