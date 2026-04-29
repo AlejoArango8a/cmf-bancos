@@ -1406,6 +1406,7 @@ function toggleCurrency() {
     document.getElementById('switchUSD').style.color = 'var(--text3)';
   }
   refreshKPIs();
+  fillBankList();
   if (ST._series) showResChart(ST._lastResChart || 'patrimonio');
   if (ST._b1) showBalTab(ST._lastBalTab || 'assets');
   if (ST._resTableData) renderResTable(ST._resTableData);
@@ -1435,15 +1436,24 @@ function convertAmt(clpMillions) {
 }
 
 function _fmtKPIBase(clpRaw, decimals) {
-  const val = ST.currency === 'USD' && ST.usdRate ? clpRaw / ST.usdRate : clpRaw;
-  const sym = ST.currency === 'USD' ? 'USD ' : '$';
+  const isUSD = ST.currency === 'USD' && ST.usdRate;
+  const val = isUSD ? clpRaw / ST.usdRate : clpRaw;
+  const sym = isUSD ? 'USD ' : '$';
   const abs = Math.abs(val);
   const sign = val < 0 ? '-' : '';
   const fmt = (n, d) => n.toLocaleString('es-CL', {minimumFractionDigits: d, maximumFractionDigits: d});
-  if (abs >= 1e12) return `${sign}${sym}${fmt(abs/1e12, 1)}T`;
-  if (abs >= 1e9)  return `${sign}${sym}${fmt(abs/1e9,  1)}B`;
-  if (abs >= 1e6)  return `${sign}${sym}${fmt(abs/1e6,  decimals)}M`;
-  if (abs >= 1e3)  return `${sign}${sym}${fmt(abs/1e3,  decimals)}K`;
+  if (isUSD) {
+    // USD: B = billion (10^9), M = million (10^6)
+    if (abs >= 1e9)  return `${sign}${sym}${fmt(abs/1e9,  1)}B`;
+    if (abs >= 1e6)  return `${sign}${sym}${fmt(abs/1e6,  decimals)}M`;
+    if (abs >= 1e3)  return `${sign}${sym}${fmt(abs/1e3,  decimals)}K`;
+  } else {
+    // CLP: B = billón (10^12), M = millardos (10^9), K = millones (10^6)
+    if (abs >= 1e12) return `${sign}${sym}${fmt(abs/1e12, 1)}B`;
+    if (abs >= 1e9)  return `${sign}${sym}${fmt(abs/1e9,  1)}M`;
+    if (abs >= 1e6)  return `${sign}${sym}${fmt(abs/1e6,  decimals)}K`;
+    if (abs >= 1e3)  return `${sign}${sym}${fmt(abs/1e3,  decimals)}`;
+  }
   return `${sign}${sym}${Math.round(abs).toLocaleString('es-CL')}`;
 }
 function fmtKPI(clpRaw)        { return _fmtKPIBase(clpRaw, 0); }
@@ -1498,6 +1508,7 @@ function fillBankList() {
       : `<span class="bank-code" style="font-size:9px;opacity:0.3;">—</span>`;
     const item = document.createElement('div');
     item.className = 'bank-item' + (ST.selected.has(c) ? ' on' : '');
+    item.dataset.bankCode = c;
     item.innerHTML = `
       <input type="checkbox" ${ST.selected.has(c)?'checked':''} onclick="event.stopPropagation();toggleBank(${c},this.checked)">
       <span class="bank-name">${name}</span>
@@ -1551,8 +1562,7 @@ function toggleBank(c, on) {
     setTimeout(() => document.getElementById('bankLimitMsg').style.display = 'none', 3000);
     document.querySelectorAll('.bank-item').forEach(el => {
       const cb = el.querySelector('input[type=checkbox]');
-      const codeSpan = el.querySelector('.bank-code');
-      if (cb && codeSpan && parseInt(codeSpan.textContent) === c) cb.checked = false;
+      if (cb && Number(el.dataset.bankCode) === c) cb.checked = false;
     });
     return;
   }
@@ -1597,11 +1607,11 @@ async function fetchData(tipo, cuentas, periodos, bancos) {
   // Intentar backend primero (una sola llamada; el servidor hace el batching interno)
   if (API_BASE_URL) {
     try {
-      const r = await fetch(`${API_BASE}/api/datos`, {
+      const r = await fetchWithTimeout(`${API_BASE}/api/datos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo, periodos, bancos: [...bancos], cuentas })
-      });
+      }, 12000); // 12s: cubre cold starts de Render (~10s) con margen
       const j = await r.json();
       if (r.ok && j.ok && Array.isArray(j.rows)) {
         ST.data[key] = j.rows;
@@ -1609,7 +1619,11 @@ async function fetchData(tipo, cuentas, periodos, bancos) {
       }
       console.warn('API /datos no OK, usando Supabase directo:', j.error || r.status);
     } catch (e) {
-      console.warn('API /datos falló, usando Supabase directo:', e);
+      if (e.name === 'AbortError') {
+        console.warn('API /datos timeout en fetchData — Render despertando, usando Supabase directo');
+      } else {
+        console.warn('API /datos falló, usando Supabase directo:', e);
+      }
     }
   }
 
