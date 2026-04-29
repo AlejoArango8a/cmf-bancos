@@ -155,4 +155,4 @@ app.post('/api/datos', async (req, res) => {
 // START
 // ============================================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API running on port ${PORT} — db: CockroachDB`));
+app.listen(PORT, () => console.log(`API running on port ${PORT} — db: CockroachDB v2`));
