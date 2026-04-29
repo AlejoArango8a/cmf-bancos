@@ -52,6 +52,54 @@ pip install -r requirements.txt
 
 ---
 
+## Seguridad — Supabase RLS
+
+La `anon key` de Supabase está incluida en el bundle del navegador (es pública por diseño en proyectos estáticos). La única defensa real es que **Row Level Security esté bien configurado en Supabase**.
+
+### Políticas RLS mínimas recomendadas
+
+En Supabase → Table Editor → selecciona la tabla → Policies:
+
+| Tabla | Operación permitida | Condición |
+|---|---|---|
+| `datos_financieros` | `SELECT` | `true` (lectura pública, sin escritura) |
+| `instituciones` | `SELECT` | `true` |
+| `plan_cuentas` | `SELECT` | `true` |
+| `carga_log` | `SELECT` | `true` |
+| `datos_financieros` | `INSERT / UPDATE / DELETE` | **Denegar** (ninguna policy = bloqueado) |
+| Todas las tablas | `INSERT / UPDATE / DELETE` con anon | **Denegar** |
+
+> **Importante:** habilita RLS en cada tabla (el toggle "Enable RLS" en Table Editor). Sin RLS activo, cualquier usuario con la anon key puede leer y escribir sin restricciones.
+
+### Verificación rápida
+
+```sql
+-- Ejecuta en Supabase → SQL Editor para ver qué tablas tienen RLS activo
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public';
+```
+
+Todas las tablas de datos deben mostrar `rowsecurity = true`.
+
+---
+
+## CORS — Backend (Render)
+
+El backend usa CORS **cerrado por defecto**. Solo acepta peticiones de los orígenes en `FRONTEND_URLS`.
+
+En Render → Environment Variables, configura:
+```
+FRONTEND_URLS=https://alejoarango8a.github.io
+```
+
+Para añadir más orígenes (staging, local dev), sepáralos con coma:
+```
+FRONTEND_URLS=https://alejoarango8a.github.io,http://localhost:5500
+```
+
+---
+
 ## Países cubiertos
 
 | País | Estado |

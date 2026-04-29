@@ -3752,7 +3752,22 @@ async function renderChileanBanks() {
   if (!el) return;
   if (!ST.periodos.length) { el.innerHTML = '<div class="empty"><p>Load data first by clicking Analyze</p></div>'; return; }
 
-  el.innerHTML = '<div class="empty"><p>Loading...</p></div>';
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:60px 0;">
+      <div class="ls-bars" style="height:40px;">
+        <div class="ls-bar" style="--i:0"></div>
+        <div class="ls-bar" style="--i:1"></div>
+        <div class="ls-bar" style="--i:2"></div>
+        <div class="ls-bar" style="--i:3"></div>
+        <div class="ls-bar" style="--i:4"></div>
+        <div class="ls-bar" style="--i:5"></div>
+        <div class="ls-bar" style="--i:6"></div>
+        <div class="ls-bar" style="--i:7"></div>
+        <div class="ls-bar" style="--i:8"></div>
+        <div class="ls-bar" style="--i:9"></div>
+      </div>
+      <div class="ls-msg">Loading Banking System data...</div>
+    </div>`;
 
   const lastP = ST.periodos[ST.periodos.length - 1];
   document.getElementById('cbPeriodLabel').textContent = `Ranked by equity — ${periodLabel(lastP)}`;
