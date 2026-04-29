@@ -1128,7 +1128,7 @@ async function init() {
     let bootstrapPatrimonio = false;
     if (API_BASE_URL) {
       try {
-        setLsMsg('Conectando al servidor...');
+        setLsMsg('Loading data...');
         const r = await fetchWithTimeout(`${API_BASE}/api/bootstrap`, {}, 6000); // 6s timeout
         const j = await r.json();
         if (r.ok && j.ok && Array.isArray(j.periodos) && j.periodos.length && Array.isArray(j.instituciones)) {
